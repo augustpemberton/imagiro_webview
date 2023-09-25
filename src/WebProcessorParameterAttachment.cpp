@@ -1,5 +1,6 @@
 #include "WebProcessorParameterAttachment.h"
 #include "WebProcessor.h"
+#include "version.h"
 
 namespace imagiro {
     WebProcessorParameterAttachment::WebProcessorParameterAttachment(WebProcessor &p, WebViewManager &w)
@@ -20,8 +21,8 @@ namespace imagiro {
     void WebProcessorParameterAttachment::addWebBindings() {
         webView.bind("requestFileChooser",
                      [&](const choc::value::ValueView& args) -> choc::value::Value {
-                        webView.requestFileChooser(args[0].toString());
-                        return {};
+                         webView.requestFileChooser(args[0].toString());
+                         return {};
                      });
 
         webView.bind(
@@ -93,6 +94,20 @@ namespace imagiro {
                     sendStateToBrowser(param);
 
                     return {};
+                }
+        );
+
+        webView.bind(
+                "juce_getCurrentVersion",
+                [&](const choc::value::ValueView &args) -> choc::value::Value {
+                    return choc::value::Value(processor.versionManager.getCurrentVersion().toStdString());
+                }
+        );
+
+        webView.bind(
+                "juce_getPluginName",
+                [&](const choc::value::ValueView &args) -> choc::value::Value {
+                    return choc::value::Value(PROJECT_NAME);
                 }
         );
     }

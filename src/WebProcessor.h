@@ -3,11 +3,13 @@
 //
 
 #pragma once
+#include <juce_audio_processors/juce_audio_processors.h>
 #include "WebProcessorParameterAttachment.h"
 #include "WebViewManager.h"
-
+#include "imagiro-processor/src/Processor.h"
 
 namespace imagiro {
+class WebUIPluginEditor;
 
 class WebProcessor : public Processor, public Parameter::Listener {
 public:

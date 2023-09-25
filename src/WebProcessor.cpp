@@ -1,5 +1,5 @@
 #include "WebProcessor.h"
-#include <web_ui/web_ui.h>
+#include "WebUIPluginEditor.h"
 
 namespace imagiro {
     juce::AudioProcessorEditor *WebProcessor::createEditor() {

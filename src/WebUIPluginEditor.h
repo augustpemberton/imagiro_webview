@@ -3,6 +3,7 @@
 //
 
 #pragma once
+#include <juce_audio_processors/juce_audio_processors.h>
 #include <choc/gui/choc_WebView.h>
 #include "WebProcessor.h"
 #include "ChocBrowserComponent.h"

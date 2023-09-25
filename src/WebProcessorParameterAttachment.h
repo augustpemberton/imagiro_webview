@@ -3,9 +3,8 @@
 //
 
 #pragma once
-#include <shared_processing_code/shared_processing_code.h>
-
 #include "WebViewManager.h"
+#include "imagiro-processor/src/parameter/Parameter.h"
 
 namespace imagiro {
     class WebProcessor;
