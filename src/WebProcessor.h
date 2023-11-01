@@ -4,16 +4,21 @@
 
 #pragma once
 #include <juce_audio_processors/juce_audio_processors.h>
-#include "WebProcessorParameterAttachment.h"
+#include <imagiro_processor/imagiro_processor.h>
+
 #include "WebViewManager.h"
-#include "imagiro-processor/src/Processor.h"
+
+#include <memory>
 
 namespace imagiro {
 class WebUIPluginEditor;
+class WebUIAttachment;
 
 class WebProcessor : public Processor, public Parameter::Listener {
 public:
     using Processor::Processor;
+
+    void init();
 
     WebViewManager& getWebViewManager() { return webView; }
     juce::AudioProcessorEditor* createEditor() override;
@@ -29,7 +34,8 @@ public:
 
 protected:
     WebViewManager webView;
-    WebProcessorParameterAttachment parameterAttachment {*this, webView};
+
+    std::vector<std::unique_ptr<WebUIAttachment>> uiAttachments;
 };
 
 } // namespace imagiro
