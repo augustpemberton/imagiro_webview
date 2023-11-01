@@ -4,6 +4,7 @@
 
 #pragma once
 #include <version.h>
+#include <timestamp.h>
 #include <imagiro_processor/imagiro_processor.h>
 #include "WebUIAttachment.h"
 
@@ -67,10 +68,45 @@ namespace imagiro {
                     }
             );
             webViewManager.bind( "juce_revealUpdate",
-             [&](const choc::value::ValueView &args) -> choc::value::Value {
-                 juce::URL(processor.versionManager.getUpdateURL()).launchInDefaultBrowser();
-                 return {};
-             } );
+                                 [&](const choc::value::ValueView &args) -> choc::value::Value {
+                                     juce::URL(processor.versionManager.getUpdateURL()).launchInDefaultBrowser();
+                                     return {};
+                                 } );
+
+            webViewManager.bind("juce_getIsDebug",
+                                [&](const choc::value::ValueView& args) -> choc::value::Value {
+#if JUCE_DEBUG
+                                    return choc::value::Value(true);
+#else
+                                    return choc::value::Value(false);
+#endif
+                                });
+
+            webViewManager.bind("juce_getPlatform",
+                                [&](const choc::value::ValueView& args) -> choc::value::Value {
+                                    if ((juce::SystemStats::getOperatingSystemType() & juce::SystemStats::Windows) != 0) {
+                                        return choc::value::Value("windows");
+                                    } else if ((juce::SystemStats::getOperatingSystemType() & juce::SystemStats::MacOSX) != 0) {
+                                        return choc::value::Value("macOS");
+                                    } else {
+                                        return choc::value::Value(juce::SystemStats::getOperatingSystemName().toStdString());
+                                    }
+                                });
+
+            webViewManager.bind("juce_getDebugVersionString",
+                                [&](const choc::value::ValueView& args) -> choc::value::Value {
+                                    juce::String statusString = " ";
+
+                                    if (juce::String(git_branch_str) != "master" && juce::String(git_branch_str) != "main") {
+                                        statusString += juce::String(git_branch_str);
+                                    }
+                                    statusString += "#" + juce::String(git_short_hash_str);
+                                    if (git_dirty_str) statusString += "!";
+                                    statusString += " (" + juce::String(build_date_str) + ")";
+
+                                    return choc::value::Value(statusString.toStdString());
+                                }
+            );
         }
     };
 }

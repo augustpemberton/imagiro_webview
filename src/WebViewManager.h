@@ -4,6 +4,7 @@
 
 #include <choc/gui/choc_WebView.h>
 #include <juce_core/juce_core.h>
+#include <juce_audio_processors/juce_audio_processors.h>
 
 #pragma once
 
@@ -56,13 +57,22 @@ namespace imagiro {
 
         bool isShowing() { return !activeWebViews.isEmpty();}
 
-        void setupWebview(choc::ui::WebView* wv) {
+        void setupWebview(juce::AudioProcessorEditor* editor, choc::ui::WebView* wv) {
             activeWebViews.add(wv);
 
             for (auto& func : fnsToBind) {
                 auto funcCopy = func.second;
                 wv->bind(func.first, std::move(funcCopy));
             }
+
+            wv->bind( "juce_setWindowSize",
+                 [editor](const choc::value::ValueView &args) -> choc::value::Value {
+                     auto x = args[0].getWithDefault(500);
+                     auto y = args[0].getWithDefault(400);
+                     editor->setSize(x, y);
+                     return {};
+                 }
+            );
 
             if (htmlToSet) wv->setHTML(*htmlToSet);
             if (currentURL) wv->navigate(*currentURL);

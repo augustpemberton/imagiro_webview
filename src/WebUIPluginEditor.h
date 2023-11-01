@@ -15,7 +15,7 @@ class WebUIPluginEditor : public juce::AudioProcessorEditor, WebViewManager::Lis
 public:
     WebUIPluginEditor(WebProcessor& p)
             : juce::AudioProcessorEditor(p),
-              browser(p.getWebViewManager()),
+              browser(*this, p.getWebViewManager()),
               debugToolbar(browser)
     {
         setSize(400, 300);

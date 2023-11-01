@@ -160,10 +160,39 @@ namespace imagiro {
                 resources->getPresetsFolder().revealToUser();
                 return {};
             });
+
+            webViewManager.bind(
+                    "juce_hasPresetBeenUpdated",
+                    [&](const choc::value::ValueView &args) -> choc::value::Value {
+                        if (!processor.lastLoadedPreset) return choc::value::Value(false);
+                        auto lastLoaded = processor.lastLoadedPreset->getPreset();
+                        auto current = processor.createPreset(lastLoaded.getName(),
+                                                              true);
+
+                        if (lastLoaded.getParamStates().size() != current.getParamStates().size())
+                            return choc::value::Value(true);
+
+                        for (auto i=0; i<lastLoaded.getParamStates().size(); i++) {
+                            if (lastLoaded.getParamStates()[i] != current.getParamStates()[i]) {
+                                return choc::value::Value(true);
+                            }
+                        }
+
+                        auto currentData = choc::json::toString(current.getData());
+                        auto lastData = choc::json::toString(lastLoaded.getData());
+                        if (currentData != lastData)
+                            return choc::value::Value(true);
+
+                        return choc::value::Value(false);
+                    }
+            );
         }
 
         void OnPresetChange(Preset &preset) override {
-            webViewManager.evaluateJavascript("window.ui.reloadPresets()");
+            // call async so that preset change listeners are called after parameter change listeners
+            juce::MessageManager::callAsync([&]() {
+                webViewManager.evaluateJavascript("window.ui.presetChanged()");
+            });
         }
 
     private:

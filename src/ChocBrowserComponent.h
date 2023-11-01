@@ -20,7 +20,7 @@ namespace imagiro {
 #endif
     {
     public:
-        ChocBrowserComponent(WebViewManager &w)
+        ChocBrowserComponent(juce::AudioProcessorEditor& editor, WebViewManager &w)
                 : webViewManager(w) {
 #if JUCE_MAC
             setView(webView.getViewHandle());
@@ -31,7 +31,7 @@ namespace imagiro {
             startTimerHz(120);
             setOpaque(true);
 
-            webViewManager.setupWebview(&webView);
+            webViewManager.setupWebview(&editor, &webView);
         }
 
         ~ChocBrowserComponent() override {
