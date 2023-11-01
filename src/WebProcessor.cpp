@@ -9,6 +9,19 @@
 
 namespace imagiro {
 
+    WebProcessor::WebProcessor(juce::String currentVersion, juce::String productSlug)
+            : Processor(currentVersion, productSlug)
+    {
+        init();
+    }
+
+    WebProcessor::WebProcessor(const juce::AudioProcessor::BusesProperties &ioLayouts,
+                               juce::String currentVersion, juce::String productSlug)
+            : Processor(ioLayouts, currentVersion, productSlug)
+    {
+        init();
+    }
+
     juce::AudioProcessorEditor *WebProcessor::createEditor() {
         juce::AudioProcessorEditor* e;
 #if JUCE_DEBUG
@@ -27,16 +40,17 @@ namespace imagiro {
     }
 
     void WebProcessor::init() {
-        uiAttachments.emplace_back(std::make_unique<ParameterAttachment>(*this, webView));
-        uiAttachments.emplace_back(std::make_unique<PresetAttachment>(*this, webView));
-        uiAttachments.emplace_back(std::make_unique<PluginInfoAttachment>(*this, webView));
-        uiAttachments.emplace_back(std::make_unique<AuthAttachment>(*this, webView));
-        uiAttachments.emplace_back(std::make_unique<FileIOAttachment>(*this, webView));
+        addUIAttachment(std::make_unique<ParameterAttachment>(*this, webView));
+        addUIAttachment(std::make_unique<PresetAttachment>(*this, webView));
+        addUIAttachment(std::make_unique<PluginInfoAttachment>(*this, webView));
+        addUIAttachment(std::make_unique<AuthAttachment>(*this, webView));
+        addUIAttachment(std::make_unique<FileIOAttachment>(*this, webView));
+    }
 
-        for (auto& attachment : uiAttachments) {
-            attachment->addListeners();
-            attachment->addBindings();
-        }
+    void WebProcessor::addUIAttachment(std::unique_ptr<WebUIAttachment> attachment) {
+        uiAttachments.emplace_back(std::move(attachment));
+        uiAttachments.back()->addListeners();
+        uiAttachments.back()->addBindings();
     }
 
 

@@ -16,9 +16,9 @@ class WebUIAttachment;
 
 class WebProcessor : public Processor, public Parameter::Listener {
 public:
-    using Processor::Processor;
-
-    void init();
+    WebProcessor(juce::String currentVersion = "1.0.0", juce::String productSlug = "");
+    WebProcessor(const juce::AudioProcessor::BusesProperties& ioLayouts,
+              juce::String currentVersion = "1.0.0", juce::String productSlug = "");
 
     WebViewManager& getWebViewManager() { return webView; }
     juce::AudioProcessorEditor* createEditor() override;
@@ -32,10 +32,14 @@ public:
 
     virtual bool isResizable() { return false; }
 
+    void addUIAttachment(std::unique_ptr<WebUIAttachment> attachment);
+
 protected:
     WebViewManager webView;
-
     std::vector<std::unique_ptr<WebUIAttachment>> uiAttachments;
+
+private:
+    void init();
 };
 
 } // namespace imagiro
