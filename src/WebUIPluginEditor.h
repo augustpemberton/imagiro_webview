@@ -46,7 +46,7 @@ public:
             for (const auto& r : results) {
                 resultsView.addArrayElement(r.getFullPathName().toStdString());
             }
-            juce::String js = "window.juceFileOpened(" + choc::json::toString(resultsView) + ")";
+            juce::String js = "window.ui.juceFileOpened(" + choc::json::toString(resultsView) + ")";
             browser.getWebViewManager().evaluateJavascript(js.toStdString());
         });
     }
