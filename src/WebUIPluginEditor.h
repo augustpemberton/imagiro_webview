@@ -3,6 +3,7 @@
 //
 
 #pragma once
+#include <juce_audio_processors/juce_audio_processors.h>
 #include <choc/gui/choc_WebView.h>
 #include "WebProcessor.h"
 #include "ChocBrowserComponent.h"
@@ -14,7 +15,7 @@ class WebUIPluginEditor : public juce::AudioProcessorEditor, WebViewManager::Lis
 public:
     WebUIPluginEditor(WebProcessor& p)
             : juce::AudioProcessorEditor(p),
-              browser(p.getWebViewManager()),
+              browser(*this, p.getWebViewManager()),
               debugToolbar(browser)
     {
         setSize(400, 300);
@@ -45,7 +46,7 @@ public:
             for (const auto& r : results) {
                 resultsView.addArrayElement(r.getFullPathName().toStdString());
             }
-            juce::String js = "window.juceFileOpened(" + choc::json::toString(resultsView) + ")";
+            juce::String js = "window.ui.juceFileOpened(" + choc::json::toString(resultsView) + ")";
             browser.getWebViewManager().evaluateJavascript(js.toStdString());
         });
     }
