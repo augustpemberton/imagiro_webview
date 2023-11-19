@@ -23,22 +23,13 @@ void imagiro::ParameterAttachment::addBindings() {
             [&](const choc::value::ValueView &args) -> choc::value::Value {
                 auto payload = args[0];
 
-<<<<<<< HEAD
-                auto paramID = payload["parameter"].toString();
-                auto newValue = juce::String(payload["value"].toString()).getFloatValue();
-=======
                 auto paramID = payload["uid"].toString();
                 auto newValue01 = juce::String(payload["value01"].toString()).getFloatValue();
->>>>>>> 493def02d5126c4d28cc96cb1aa9f921ad10de6e
 
                 auto param = processor.getParameter(paramID);
                 if (param) {
                     juce::ScopedValueSetter<bool> svs(ignoreCallbacks, true);
-<<<<<<< HEAD
-                    param->setUserValueNotifingHost(newValue);
-=======
                     param->setValueNotifyingHost(newValue01);
->>>>>>> 493def02d5126c4d28cc96cb1aa9f921ad10de6e
                 }
                 return {};
             });
@@ -69,21 +60,12 @@ void imagiro::ParameterAttachment::addBindings() {
                 auto param = processor.getParameter(args[0].toString());
                 if (!param) return {};
 
-<<<<<<< HEAD
-                auto userVal = param->getUserValue();
-                if (args.size() > 1) {
-                    auto valToUse = args[1].getFloat64();
-                    userVal = valToUse;
-                }
-
-=======
                 auto v = param->getValue();
                 if (args.size() > 1) {
                     v = args[1].getWithDefault(0.f);
                 }
 
                 auto userVal = param->convertFrom0to1(v);
->>>>>>> 493def02d5126c4d28cc96cb1aa9f921ad10de6e
                 auto val = choc::value::createObject("displayValue");
                 auto displayVal = param->getDisplayValueForUserValue(userVal);
                 val.setMember("value", displayVal.value.toStdString());
@@ -117,19 +99,11 @@ void imagiro::ParameterAttachment::parameterChangedSync(imagiro::Parameter *para
 
 void imagiro::ParameterAttachment::sendStateToBrowser(imagiro::Parameter *param) {
     auto uid = param->getUID();
-<<<<<<< HEAD
-    auto value = param->getUserValue();
-    juce::MessageManager::callAsync([&, uid, value]() {
-        auto *obj = new juce::DynamicObject();
-        obj->setProperty("parameter", uid);
-        obj->setProperty("value", value);
-=======
     auto value = param->getValue();
     juce::MessageManager::callAsync([&, uid, value]() {
         auto *obj = new juce::DynamicObject();
         obj->setProperty("uid", uid);
         obj->setProperty("value01", value);
->>>>>>> 493def02d5126c4d28cc96cb1aa9f921ad10de6e
 
         juce::var json(obj);
         auto jsonString = juce::JSON::toString(json);
@@ -143,13 +117,8 @@ choc::value::Value imagiro::ParameterAttachment::getParameterSpec() {
         auto paramSpec = choc::value::createObject("param");
         paramSpec.setMember("uid", param->getUID().toStdString());
         paramSpec.setMember("name", param->getName(100).toStdString());
-<<<<<<< HEAD
-        paramSpec.setMember("value", param->getUserValue());
-        paramSpec.setMember("defaultVal", param->getUserDefaultValue());
-=======
         paramSpec.setMember("value01", param->getValue());
         paramSpec.setMember("defaultVal01", param->getDefaultValue());
->>>>>>> 493def02d5126c4d28cc96cb1aa9f921ad10de6e
 
         auto range = choc::value::createObject("range");
         range.setMember("min", param->getUserRange().start);
