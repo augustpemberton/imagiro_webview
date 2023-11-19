@@ -13,31 +13,31 @@ namespace imagiro {
         void addBindings() override {
             webViewManager.bind( "juce_getIsAuthorized",
                                  [&](const choc::value::ValueView &args) -> choc::value::Value {
-                                     return choc::value::Value(processor.auth.isAuthorized());
+                                     return choc::value::Value(processor.getAuthManager().isAuthorized());
                                  }
             );
 
             webViewManager.bind( "juce_getDemoStarted",
                                  [&](const choc::value::ValueView &args) -> choc::value::Value {
-                                     return choc::value::Value(processor.auth.hasDemoStarted());
+                                     return choc::value::Value(processor.getAuthManager().hasDemoStarted());
                                  }
             );
 
             webViewManager.bind( "juce_getDemoFinished",
                                  [&](const choc::value::ValueView &args) -> choc::value::Value {
-                                     return choc::value::Value(processor.auth.hasDemoFinished());
+                                     return choc::value::Value(processor.getAuthManager().hasDemoFinished());
                                  }
             );
 
             webViewManager.bind( "juce_getDemoTimeLeftSeconds",
                                  [&](const choc::value::ValueView &args) -> choc::value::Value {
-                                     return choc::value::Value(processor.auth.getDemoTimeLeft().inSeconds());
+                                     return choc::value::Value(processor.getAuthManager().getDemoTimeLeft().inSeconds());
                                  }
             );
 
             webViewManager.bind( "juce_startDemo",
                                  [&](const choc::value::ValueView &args) -> choc::value::Value {
-                                     processor.auth.startDemo();
+                                     processor.getAuthManager().startDemo();
                                      return {};
                                  }
             );
@@ -45,7 +45,7 @@ namespace imagiro {
             webViewManager.bind( "juce_tryAuthorize",
                                  [&](const choc::value::ValueView &args) -> choc::value::Value {
                                      auto serial = args[0].toString();
-                                     auto success = processor.auth.tryAuth(serial);
+                                     auto success = processor.getAuthManager().tryAuth(serial);
                                      return choc::value::createBool(success);
                                  }
             );

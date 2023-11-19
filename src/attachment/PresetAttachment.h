@@ -44,17 +44,19 @@ namespace imagiro {
                         return presetState;
                     }
             );
+
             webViewManager.bind(
                     "juce_createPreset",
                     [&](const choc::value::ValueView &args) -> choc::value::Value {
                         auto name = args[0].toString();
                         auto category = args[1].toString();
-                        auto preset = processor.createPreset(name);
+                        auto preset = processor.createPreset(name, false);
                         FileBackedPreset::save(preset, category);
                         webViewManager.evaluateJavascript("window.ui.reloadPresets()");
                         return {};
                     }
             );
+
             webViewManager.bind(
                     "juce_getCurrentSettingsAsPreset",
                     [&](const choc::value::ValueView &args) -> choc::value::Value {
@@ -64,7 +66,8 @@ namespace imagiro {
                                 juce::String("-") +
                                 juce::String(time.getMonthName(true)) +
                                 juce::String("-") +
-                                juce::String(time.getYear())
+                                juce::String(time.getYear()),
+                                true
                         );
 
                         return preset.getState();

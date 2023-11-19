@@ -13,11 +13,11 @@ namespace imagiro {
     public:
         using WebUIAttachment::WebUIAttachment;
         void addListeners() override {
-            processor.versionManager.addListener(this);
+            processor.getVersionManager().addListener(this);
         }
 
         ~PluginInfoAttachment() override {
-            processor.versionManager.removeListener(this);
+            processor.getVersionManager().removeListener(this);
         }
 
         void OnUpdateDiscovered() override {
@@ -28,7 +28,7 @@ namespace imagiro {
             webViewManager.bind(
                     "juce_getCurrentVersion",
                     [&](const choc::value::ValueView &args) -> choc::value::Value {
-                        return choc::value::Value(processor.versionManager.getCurrentVersion().toStdString());
+                        return choc::value::Value(processor.getVersionManager().getCurrentVersion().toStdString());
                     }
             );
 
@@ -61,7 +61,7 @@ namespace imagiro {
             webViewManager.bind(
                     "juce_getIsUpdateAvailable",
                     [&](const choc::value::ValueView &args) -> choc::value::Value {
-                        auto newVersion = processor.versionManager.isUpdateAvailable();
+                        auto newVersion = processor.getVersionManager().isUpdateAvailable();
                         if (!newVersion) return {};
 
                         return choc::value::Value(newVersion->toStdString());
@@ -69,7 +69,7 @@ namespace imagiro {
             );
             webViewManager.bind( "juce_revealUpdate",
                                  [&](const choc::value::ValueView &args) -> choc::value::Value {
-                                     juce::URL(processor.versionManager.getUpdateURL()).launchInDefaultBrowser();
+                                     juce::URL(processor.getVersionManager().getUpdateURL()).launchInDefaultBrowser();
                                      return {};
                                  } );
 
