@@ -47,6 +47,11 @@ namespace imagiro {
         addUIAttachment(std::make_unique<FileIOAttachment>(*this, webView));
     }
 
+    void WebProcessor::addUIAttachment(WebUIAttachment& attachment) {
+        attachment.addListeners();
+        attachment.addBindings();
+    }
+
     void WebProcessor::addUIAttachment(std::unique_ptr<WebUIAttachment> attachment) {
         uiAttachments.emplace_back(std::move(attachment));
         uiAttachments.back()->addListeners();
