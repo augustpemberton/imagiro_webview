@@ -32,13 +32,14 @@ public:
 
     virtual bool isResizable() { return false; }
 
-    void addUIAttachment(std::unique_ptr<WebUIAttachment> attachment);
+    void addUIAttachment(WebUIAttachment& attachment);
 
 protected:
     WebViewManager webView;
     std::vector<std::unique_ptr<WebUIAttachment>> uiAttachments;
 
 private:
+    void addUIAttachment(std::unique_ptr<WebUIAttachment> attachment);
     void init();
 };
 
