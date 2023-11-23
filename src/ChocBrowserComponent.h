@@ -12,7 +12,7 @@
 namespace imagiro {
 
     class ChocBrowserComponent
-            : public juce::Timer,
+            :
 #if JUCE_MAC
               public juce::NSViewComponent
 #elif JUCE_WINDOWS
@@ -22,20 +22,19 @@ namespace imagiro {
     public:
         ChocBrowserComponent(juce::AudioProcessorEditor& editor, WebViewManager &w)
                 : webViewManager(w) {
+            webView = webViewManager.getWebView();
 #if JUCE_MAC
-            setView(webView.getViewHandle());
+            setView(webView->getViewHandle());
 #elif JUCE_WINDOWS
             setHWND(webView.getViewHandle());
 #endif
-
-            startTimerHz(120);
             setOpaque(true);
 
-            webViewManager.setupWebview(&editor, &webView);
+            webViewManager.setupWebview(&editor, webView.get());
         }
 
         ~ChocBrowserComponent() override {
-            webViewManager.removeWebView(&webView);
+            webViewManager.removeWebView(webView.get());
 #if JUCE_MAC
             setView ({});
 #elif JUCE_WINDOWS
@@ -43,22 +42,11 @@ namespace imagiro {
 #endif
         }
 
-        void timerCallback() override {
-            auto source = juce::Desktop::getInstance().getMainMouseSource();
-            auto mousePos = source.getScreenPosition();
-            mousePos -= getScreenPosition().toFloat();
-            lastMousePos = mousePos;
-
-            auto js = "if (window.juceMouseMove !== undefined) window.juceMouseMove(" + juce::String(mousePos.x) + ", " + juce::String(mousePos.y) + ")";
-            webView.evaluateJavascript(js.toStdString());
-        }
-
         WebViewManager &getWebViewManager() { return webViewManager; }
 
 
     private:
         WebViewManager &webViewManager;
-        choc::ui::WebView webView {{true, true}};
-        juce::Point<float> lastMousePos;
+        std::unique_ptr<choc::ui::WebView> webView;
     };
 }

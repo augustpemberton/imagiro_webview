@@ -18,6 +18,10 @@ namespace imagiro {
         void addListener(Listener* l) {listeners.add(l);}
         void removeListener(Listener* l) {listeners.remove(l);}
 
+        std::unique_ptr<choc::ui::WebView> getWebView() {
+
+        }
+
         void navigate(const std::string &url) {
             for (auto wv : activeWebViews) wv->navigate(url);
             currentURL = url;
