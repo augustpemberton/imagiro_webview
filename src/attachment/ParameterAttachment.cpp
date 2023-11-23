@@ -28,7 +28,7 @@ void imagiro::ParameterAttachment::addBindings() {
 
                 auto param = processor.getParameter(paramID);
                 if (param) {
-                    juce::ScopedValueSetter<bool> svs(ignoreCallbacks, true);
+                    juce::ScopedValueSetter<Parameter*> svs (ignoreCallbackParam, param);
                     param->setValueNotifyingHost(newValue01);
                 }
                 return {};
@@ -93,7 +93,7 @@ void imagiro::ParameterAttachment::addBindings() {
 }
 
 void imagiro::ParameterAttachment::parameterChangedSync(imagiro::Parameter *param) {
-    if (!ignoreCallbacks)
+    if (ignoreCallbackParam != param)
         sendStateToBrowser(param);
 }
 
@@ -124,6 +124,7 @@ choc::value::Value imagiro::ParameterAttachment::getParameterSpec() {
         range.setMember("min", param->getUserRange().start);
         range.setMember("max", param->getUserRange().end);
         range.setMember("step", param->getUserRange().interval);
+        range.setMember("skew", param->getUserRange().skew);
 
         paramSpec.setMember("range", range);
         params.addArrayElement(paramSpec);

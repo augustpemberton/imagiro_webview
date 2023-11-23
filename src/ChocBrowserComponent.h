@@ -27,7 +27,7 @@ namespace imagiro {
 #if JUCE_MAC
             setView(webView->getViewHandle());
 #elif JUCE_WINDOWS
-            setHWND(webView.getViewHandle());
+            setHWND(webView->getViewHandle());
 #endif
 
             if (sendMousePos) startTimerHz(20);

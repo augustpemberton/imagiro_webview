@@ -21,6 +21,6 @@ namespace imagiro {
         void sendStateToBrowser(Parameter* param);
         choc::value::Value getParameterSpec();
 
-        bool ignoreCallbacks {false};
+        Parameter* ignoreCallbackParam {nullptr};
     };
 } // namespace imagiro
