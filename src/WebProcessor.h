@@ -14,7 +14,7 @@ namespace imagiro {
 class WebUIPluginEditor;
 class WebUIAttachment;
 
-class WebProcessor : public Processor, public Parameter::Listener {
+class WebProcessor : public Processor {
 public:
     WebProcessor(juce::String currentVersion = "1.0.0", juce::String productSlug = "");
     WebProcessor(const juce::AudioProcessor::BusesProperties& ioLayouts,
@@ -34,9 +34,13 @@ public:
 
     void addUIAttachment(WebUIAttachment& attachment);
 
+    choc::value::Value& getWebViewData() { return webViewCustomData; }
+
 protected:
     WebViewManager webView;
     std::vector<std::unique_ptr<WebUIAttachment>> uiAttachments;
+
+    choc::value::Value webViewCustomData {choc::value::createObject("CustomData")};
 
 private:
     void addUIAttachment(std::unique_ptr<WebUIAttachment> attachment);

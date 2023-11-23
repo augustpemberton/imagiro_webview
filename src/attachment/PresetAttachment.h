@@ -181,10 +181,12 @@ namespace imagiro {
                             }
                         }
 
-                        auto currentData = choc::json::toString(current.getData());
-                        auto lastData = choc::json::toString(lastLoaded.getData());
-                        if (currentData != lastData)
-                            return choc::value::Value(true);
+                        // commented out to make upgrading presets easier
+                        // in theory sensible defaults should be set
+//                        auto currentData = choc::json::toString(current.getData());
+//                        auto lastData = choc::json::toString(lastLoaded.getData());
+//                        if (currentData != lastData)
+//                            return choc::value::Value(true);
 
                         return choc::value::Value(false);
                     }

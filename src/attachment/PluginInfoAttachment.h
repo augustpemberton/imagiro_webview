@@ -38,6 +38,26 @@ namespace imagiro {
                         return choc::value::Value(PROJECT_NAME);
                     }
             );
+
+            webViewManager.bind(
+                    "juce_saveInProcessor", [&](const choc::value::ValueView &args) -> choc::value::Value {
+                        auto key = std::string(args[0].getWithDefault(""));
+                        if (key.empty()) return {};
+                        auto value = std::string(args[1].getWithDefault(""));
+
+                        processor.getWebViewData().setMember(key, value);
+                        return {};
+                    });
+
+            webViewManager.bind(
+                    "juce_loadFromProcessor", [&](const choc::value::ValueView &args) -> choc::value::Value {
+                        auto key = std::string(args[0].getWithDefault(""));
+                        if (key.empty()) return {};
+
+                        if (!processor.getWebViewData().hasObjectMember(key)) return {};
+                        return choc::value::Value(processor.getWebViewData()[key]);
+                    });
+
             webViewManager.bind(
                     "juce_setConfig",
                     [&](const choc::value::ValueView &args) -> choc::value::Value {
