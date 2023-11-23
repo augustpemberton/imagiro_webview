@@ -18,8 +18,32 @@ namespace imagiro {
         void addListener(Listener* l) {listeners.add(l);}
         void removeListener(Listener* l) {listeners.remove(l);}
 
-        std::unique_ptr<choc::ui::WebView> getWebView() {
+        WebViewManager() {
+            preparedWebview = std::make_unique<choc::ui::WebView>(
+                    choc::ui::WebView::Options{
+                        true, true});
+            setupWebview(preparedWebview.get());
+        }
 
+        std::shared_ptr<choc::ui::WebView> getWebView(juce::AudioProcessorEditor* editor) {
+            auto s = std::move(preparedWebview);
+
+            preparedWebview = std::make_unique<choc::ui::WebView>(
+                    choc::ui::WebView::Options{
+                            true, true});
+
+            s->bind( "juce_setWindowSize",
+                      [editor](const choc::value::ValueView &args) -> choc::value::Value {
+                          auto x = args[0].getWithDefault(500);
+                          auto y = args[0].getWithDefault(400);
+                          editor->setSize(x, y);
+                          return {};
+                      }
+            );
+
+            setupWebview(preparedWebview.get());
+
+            return s;
         }
 
         void navigate(const std::string &url) {
@@ -61,22 +85,13 @@ namespace imagiro {
 
         bool isShowing() { return !activeWebViews.isEmpty();}
 
-        void setupWebview(juce::AudioProcessorEditor* editor, choc::ui::WebView* wv) {
+        void setupWebview(choc::ui::WebView* wv) {
             activeWebViews.add(wv);
 
             for (auto& func : fnsToBind) {
                 auto funcCopy = func.second;
                 wv->bind(func.first, std::move(funcCopy));
             }
-
-            wv->bind( "juce_setWindowSize",
-                 [editor](const choc::value::ValueView &args) -> choc::value::Value {
-                     auto x = args[0].getWithDefault(500);
-                     auto y = args[0].getWithDefault(400);
-                     editor->setSize(x, y);
-                     return {};
-                 }
-            );
 
             if (htmlToSet) wv->setHTML(*htmlToSet);
             if (currentURL) wv->navigate(*currentURL);
@@ -85,6 +100,7 @@ namespace imagiro {
     private:
         juce::ListenerList<Listener> listeners;
 
+        std::shared_ptr<choc::ui::WebView> preparedWebview;
         juce::Array<choc::ui::WebView*, juce::CriticalSection> activeWebViews;
 
         std::vector<std::pair<std::string, choc::ui::WebView::CallbackFn>> fnsToBind;

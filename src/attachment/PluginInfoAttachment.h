@@ -134,6 +134,13 @@ namespace imagiro {
                         return choc::value::Value(processor.getCpuLoad());
                     }
             );
+            webViewManager.bind(
+                    "juce_Log",
+                    [&](const choc::value::ValueView &args) -> choc::value::Value {
+                        auto string = args[0].getWithDefault("");
+                        juce::Logger::outputDebugString(string);
+                        return {};
+                    });
         }
     };
 }

@@ -20,19 +20,26 @@ namespace imagiro {
 #endif
     {
     public:
-        ChocBrowserComponent(juce::AudioProcessorEditor& editor, WebViewManager &w)
-                : webViewManager(w) {
-            webView = webViewManager.getWebView();
+        ChocBrowserComponent(juce::AudioProcessorEditor& editor, WebViewManager &w,
+                             bool sendMousePosition = false)
+                : webViewManager(w), sendMousePos(sendMousePosition) {
+            webView = webViewManager.getWebView(&editor);
 #if JUCE_MAC
             setView(webView->getViewHandle());
 #elif JUCE_WINDOWS
             setHWND(webView.getViewHandle());
 #endif
 
-            startTimerHz(120);
+            if (sendMousePos) startTimerHz(20);
             setOpaque(true);
+        }
 
-            webViewManager.setupWebview(&editor, webView.get());
+        void focusGained(juce::Component::FocusChangeType cause) override {
+            stopTimer();
+        }
+
+        void focusLost(juce::Component::FocusChangeType cause) override {
+            if (sendMousePos) startTimerHz(20);
         }
 
         ~ChocBrowserComponent() override {
@@ -50,16 +57,17 @@ namespace imagiro {
             mousePos -= getScreenPosition().toFloat();
             lastMousePos = mousePos;
 
-            auto js = "if (window.juceMouseMove !== undefined) window.juceMouseMove(" + juce::String(mousePos.x) + ", " + juce::String(mousePos.y) + ")";
+            auto js = "if (window.ui.juceMouseMove !== undefined) window.ui.juceMouseMove(" + juce::String(mousePos.x) + ", " + juce::String(mousePos.y) + ")";
             webView->evaluateJavascript(js.toStdString());
         }
 
         WebViewManager &getWebViewManager() { return webViewManager; }
 
-
     private:
         WebViewManager &webViewManager;
-        std::unique_ptr<choc::ui::WebView> webView;
+        std::shared_ptr<choc::ui::WebView> webView;
         juce::Point<float> lastMousePos;
+
+        bool sendMousePos;
     };
 }
