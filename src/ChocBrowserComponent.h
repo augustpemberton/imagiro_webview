@@ -12,7 +12,7 @@
 namespace imagiro {
 
     class ChocBrowserComponent
-            :
+            : public juce::Timer,
 #if JUCE_MAC
               public juce::NSViewComponent
 #elif JUCE_WINDOWS
@@ -28,6 +28,8 @@ namespace imagiro {
 #elif JUCE_WINDOWS
             setHWND(webView.getViewHandle());
 #endif
+
+            startTimerHz(120);
             setOpaque(true);
 
             webViewManager.setupWebview(&editor, webView.get());
@@ -42,11 +44,22 @@ namespace imagiro {
 #endif
         }
 
+        void timerCallback() override {
+            auto source = juce::Desktop::getInstance().getMainMouseSource();
+            auto mousePos = source.getScreenPosition();
+            mousePos -= getScreenPosition().toFloat();
+            lastMousePos = mousePos;
+
+            auto js = "if (window.juceMouseMove !== undefined) window.juceMouseMove(" + juce::String(mousePos.x) + ", " + juce::String(mousePos.y) + ")";
+            webView->evaluateJavascript(js.toStdString());
+        }
+
         WebViewManager &getWebViewManager() { return webViewManager; }
 
 
     private:
         WebViewManager &webViewManager;
         std::unique_ptr<choc::ui::WebView> webView;
+        juce::Point<float> lastMousePos;
     };
 }
