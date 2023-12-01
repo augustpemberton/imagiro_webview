@@ -8,6 +8,11 @@
 #include <imagiro_processor/imagiro_processor.h>
 #include "WebUIAttachment.h"
 
+#include "juce_audio_devices/juce_audio_devices.h"
+#include "juce_audio_plugin_client/juce_audio_plugin_client.h"
+#include "juce_audio_utils/juce_audio_utils.h"
+#include "juce_audio_plugin_client/Standalone/juce_StandaloneFilterWindow.h"
+
 namespace imagiro {
     class PluginInfoAttachment : public WebUIAttachment, public VersionManager::Listener {
     public:
@@ -29,6 +34,31 @@ namespace imagiro {
                     "juce_getCurrentVersion",
                     [&](const choc::value::ValueView &args) -> choc::value::Value {
                         return choc::value::Value(processor.getVersionManager().getCurrentVersion().toStdString());
+                    }
+            );
+            webViewManager.bind(
+                    "juce_showStandaloneAudioSettings",
+                    [&](const choc::value::ValueView &args) -> choc::value::Value {
+                        juce::StandalonePluginHolder::getInstance()->showAudioSettingsDialog();
+                        return {};
+                    }
+            );
+
+            webViewManager.bind(
+                    "juce_getWrapperType",
+                    [&](const choc::value::ValueView &args) -> choc::value::Value {
+                        std::string wrapperTypeString;
+
+                        if (processor.wrapperType == juce::AudioProcessor::wrapperType_AudioUnit)
+                            wrapperTypeString = "AU";
+                        else if (processor.wrapperType == juce::AudioProcessor::wrapperType_Standalone)
+                            wrapperTypeString = "Standalone";
+                        else if (processor.wrapperType == juce::AudioProcessor::wrapperType_VST3)
+                            wrapperTypeString = "VST3";
+                        else if (processor.wrapperType == juce::AudioProcessor::wrapperType_VST)
+                            wrapperTypeString = "VST2";
+
+                        return choc::value::Value(wrapperTypeString);
                     }
             );
 

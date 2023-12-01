@@ -36,6 +36,15 @@ namespace imagiro {
                                getResizeMax().x, getResizeMax().y);
         }
 
+        if(wrapperType == wrapperType_Standalone)
+        {
+            if(juce::TopLevelWindow::getNumTopLevelWindows() == 1)
+            {
+                juce::TopLevelWindow* w = juce::TopLevelWindow::getTopLevelWindow(0);
+                w->setUsingNativeTitleBar(true);
+            }
+        }
+
         return e;
     }
 
