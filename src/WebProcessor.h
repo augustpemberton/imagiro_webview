@@ -23,8 +23,6 @@ public:
     WebViewManager& getWebViewManager() { return webView; }
     juce::AudioProcessorEditor* createEditor() override;
 
-    virtual std::string getHTMLString() = 0;
-
     virtual juce::Point<int> getDefaultWindowSize() { return {400, 300}; }
 
     virtual juce::Point<int> getResizeMin() { return {200, 200}; }

@@ -27,7 +27,7 @@ namespace imagiro {
 #if JUCE_DEBUG
         e = WebUIPluginEditor::createFromURL(*this, "http://localhost:4342");
 #else
-        e = WebUIPluginEditor::createFromHTMLString(*this, getHTMLString());
+        e = WebUIPluginEditor::create(*this);
 #endif
         e->setSize(getDefaultWindowSize().x, getDefaultWindowSize().y);
         if (isResizable()) {

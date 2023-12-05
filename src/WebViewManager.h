@@ -5,6 +5,7 @@
 #include <choc/gui/choc_WebView.h>
 #include <juce_core/juce_core.h>
 #include <juce_audio_processors/juce_audio_processors.h>
+#include "ChocServer.h"
 
 #pragma once
 
@@ -20,8 +21,14 @@ namespace imagiro {
 
         WebViewManager() {
             preparedWebview = std::make_unique<choc::ui::WebView>(
-                    choc::ui::WebView::Options{
-                        true, true});
+                    choc::ui::WebView::Options
+                            {
+                                    true, true, "",
+                                    [&](auto& path) {
+                                        return server.getResource(path);
+                                    }
+                            }
+            );
             setupWebview(preparedWebview.get());
         }
 
@@ -29,8 +36,14 @@ namespace imagiro {
             auto s = std::move(preparedWebview);
 
             preparedWebview = std::make_unique<choc::ui::WebView>(
-                    choc::ui::WebView::Options{
-                            true, true});
+                    choc::ui::WebView::Options
+                    {
+                            true, true, "",
+                            [&](auto& path) {
+                                return server.getResource(path);
+                            }
+                    }
+            );
 
             s->bind( "juce_setWindowSize",
                       [editor](const choc::value::ValueView &args) -> choc::value::Value {
@@ -106,5 +119,7 @@ namespace imagiro {
         std::vector<std::pair<std::string, choc::ui::WebView::CallbackFn>> fnsToBind;
         std::optional<std::string> htmlToSet;
         std::optional<std::string> currentURL;
+
+        ChocServer server;
     };
 }

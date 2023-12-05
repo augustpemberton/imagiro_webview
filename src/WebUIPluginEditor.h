@@ -57,6 +57,11 @@ public:
         return editor;
     }
 
+    static WebUIPluginEditor* create(WebProcessor& p) {
+        auto editor = new WebUIPluginEditor(p);
+        return editor;
+    }
+
     static WebUIPluginEditor* createFromURL(WebProcessor& p, const juce::String& url) {
         auto editor = new WebUIPluginEditor(p);
         editor->browser.getWebViewManager().navigate(url.toStdString());
