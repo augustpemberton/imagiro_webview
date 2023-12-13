@@ -4,9 +4,9 @@
 
 #pragma once
 
-#include <juce_gui_extra/juce_gui_extra.h>
-
 #include "WebViewManager.h"
+#include "juce_gui_extra/embedding/juce_NSViewComponent.h"
+#include "juce_gui_extra/embedding/juce_HWNDComponent.h"
 
 
 namespace imagiro {
