@@ -45,6 +45,12 @@ namespace imagiro {
             );
 
             webViewManager.bind(
+                    "juce_getMillisecondTime",
+                    [&](const choc::value::ValueView &args) -> choc::value::Value {
+                            return choc::value::Value((juce::int64)juce::Time::getMillisecondCounter());
+                    });
+
+            webViewManager.bind(
                     "juce_getWrapperType",
                     [&](const choc::value::ValueView &args) -> choc::value::Value {
                         std::string wrapperTypeString;
