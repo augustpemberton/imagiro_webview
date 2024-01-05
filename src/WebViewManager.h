@@ -33,9 +33,9 @@ namespace imagiro {
         }
 
         std::shared_ptr<choc::ui::WebView> getWebView(juce::AudioProcessorEditor* editor) {
-            auto s = std::move(preparedWebview);
+//            auto s = std::move(preparedWebview);
 
-            preparedWebview = std::make_unique<choc::ui::WebView>(
+            auto s = std::make_unique<choc::ui::WebView>(
                     choc::ui::WebView::Options
                     {
                             true, true, "",
@@ -54,7 +54,7 @@ namespace imagiro {
                       }
             );
 
-            setupWebview(preparedWebview.get());
+            setupWebview(s.get());
 
             return s;
         }
