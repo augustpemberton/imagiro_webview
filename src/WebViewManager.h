@@ -79,8 +79,10 @@ namespace imagiro {
             currentURL = "";
         }
 
-        void evaluateJavascript(const std::string& js) {
-            for (auto wv : activeWebViews) wv->evaluateJavascript(js);
+        void evaluateJavascript(std::string js) {
+            juce::MessageManager::callAsync([&, js]() {
+                for (auto wv: activeWebViews) wv->evaluateJavascript(js);
+            });
         }
 
         void bind(const std::string &functionName, choc::ui::WebView::CallbackFn &&func) {

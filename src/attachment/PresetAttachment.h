@@ -194,10 +194,7 @@ namespace imagiro {
         }
 
         void OnPresetChange(Preset &preset) override {
-            // call async so that preset change listeners are called after parameter change listeners
-            juce::MessageManager::callAsync([&]() {
-                webViewManager.evaluateJavascript("window.ui.presetChanged()");
-            });
+            webViewManager.evaluateJavascript("window.ui.presetChanged()");
         }
 
     private:
