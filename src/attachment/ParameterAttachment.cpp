@@ -25,6 +25,7 @@ void imagiro::ParameterAttachment::addBindings() {
 
                 auto paramID = payload["uid"].toString();
                 auto newValue01 = juce::String(payload["value01"].toString()).getFloatValue();
+                if (isnan(newValue01)) return {};
 
                 auto param = processor.getParameter(paramID);
                 if (param) {
