@@ -29,12 +29,12 @@ public:
         resourceName = resourceName.substr(resourceName.find_last_of("/") + 1);
 
         int resourceSize = 0;
-        auto resource = BinaryData::getNamedResource(
-                resourceName.c_str(), resourceSize);
+        auto resource = BinaryData::getNamedResource(resourceName.c_str(), resourceSize);
         if (!resource) {
             jassertfalse;
             return {};
         }
+
         auto filePath = std::string(BinaryData::getNamedResourceOriginalFilename(
                 resourceName.c_str()));
 
@@ -49,18 +49,21 @@ public:
 
         juce::StringPairArray responseHeaders;
         std::unique_ptr<juce::InputStream> stream (url.createInputStream(options
-        .withResponseHeaders(&responseHeaders)));
+                                                                                 .withResponseHeaders(&responseHeaders)));
 
-        if (stream == nullptr) return {};
+        if (stream == nullptr) {
+            jassertfalse;
+            return {};
+        }
 
         auto path = url.toString(false).toStdString();
         auto fileExtension = path.substr(path.find_last_of(".") + 1);
-       if (fileExtension.empty() || fileExtension == path) fileExtension = "html";
+        if (fileExtension.empty() || fileExtension == path) fileExtension = "html";
 
         auto responseString = stream->readEntireStreamAsString();
         return toResource(responseString,
                           responseHeaders.getValue("Content-Type", "text/html")
-                          .toStdString());
+                                  .toStdString());
     }
 
     std::string getMimeType (std::string_view extension)
