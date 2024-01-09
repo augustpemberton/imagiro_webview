@@ -33,9 +33,9 @@ namespace imagiro {
         }
 
         std::shared_ptr<choc::ui::WebView> getWebView(juce::AudioProcessorEditor* editor) {
-//            auto s = std::move(preparedWebview);
+            auto s = std::move(preparedWebview);
 
-            auto s = std::make_unique<choc::ui::WebView>(
+            preparedWebview = std::make_unique<choc::ui::WebView>(
                     choc::ui::WebView::Options
                     {
                             true, true, "",
@@ -54,7 +54,7 @@ namespace imagiro {
                       }
             );
 
-            setupWebview(s.get());
+            setupWebview(preparedWebview.get());
 
             return s;
         }
@@ -66,11 +66,11 @@ namespace imagiro {
         }
 
         void reload() {
-            if (!currentURL) return;
-            for (auto wv : activeWebViews) wv->navigate(*currentURL);
+            if (!currentURL.has_value()) return;
+            for (auto wv : activeWebViews) wv->navigate(currentURL.value());
         }
 
-        std::string getCurrentURL() { return currentURL ? *currentURL : ""; }
+        std::string getCurrentURL() { return currentURL ? currentURL.value() : ""; }
 
         // base functions
         void setHTML(const std::string &html) {
@@ -108,8 +108,8 @@ namespace imagiro {
                 wv->bind(func.first, std::move(funcCopy));
             }
 
-            if (htmlToSet) wv->setHTML(*htmlToSet);
-            if (currentURL) wv->navigate(*currentURL);
+            if (htmlToSet) wv->setHTML(htmlToSet.value());
+            if (currentURL) wv->navigate(currentURL.value());
         }
 
     private:
