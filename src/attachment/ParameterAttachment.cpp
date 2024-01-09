@@ -76,6 +76,18 @@ void imagiro::ParameterAttachment::addBindings() {
             });
 
     webViewManager.bind(
+            "juce_textToValue",
+            [&](const choc::value::ValueView &args) -> choc::value::Value {
+                auto paramID = juce::String(args[0].toString());
+                auto displayValue = juce::String(args[1].toString());
+                auto param = processor.getParameter(paramID);
+                if (!param) return {};
+
+                auto val = param->getConfig()->valueFunction(*param, displayValue);
+                return choc::value::Value(val);
+            });
+
+    webViewManager.bind(
             "juce_setDisplayValue",
             [&](const choc::value::ValueView &args) -> choc::value::Value {
                 auto paramID = juce::String(args[0].toString());

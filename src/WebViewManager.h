@@ -48,7 +48,7 @@ namespace imagiro {
             s->bind( "juce_setWindowSize",
                       [editor](const choc::value::ValueView &args) -> choc::value::Value {
                           auto x = args[0].getWithDefault(500);
-                          auto y = args[0].getWithDefault(400);
+                          auto y = args[1].getWithDefault(400);
                           editor->setSize(x, y);
                           return {};
                       }
