@@ -20,7 +20,7 @@ public:
     {
         setSize(400, 300);
         addAndMakeVisible(browser);
-        addAndMakeVisible(debugToolbar);
+//        addAndMakeVisible(debugToolbar);
         browser.getWebViewManager().addListener(this);
     }
 
@@ -70,9 +70,9 @@ public:
 
     void resized() override {
         auto b = getLocalBounds();
-#if JUCE_DEBUG
-        debugToolbar.setBounds(b.removeFromBottom(20));
-#endif
+//#if JUCE_DEBUG
+//        debugToolbar.setBounds(b.removeFromBottom(20));
+//#endif
         browser.setBounds(b);
     }
 
