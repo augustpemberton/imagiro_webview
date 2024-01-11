@@ -32,8 +32,10 @@ void imagiro::ParameterAttachment::addBindings() {
                     juce::ScopedValueSetter<Parameter*> svs (ignoreCallbackParam, param);
                     param->setValueNotifyingHost(newValue01);
                 }
-                return {};
+
+                return choc::value::Value(param->getValue());
             });
+
     webViewManager.bind(
             "juce_startPluginParameterGesture",
             [&](const choc::value::ValueView &args) -> choc::value::Value {
@@ -52,7 +54,7 @@ void imagiro::ParameterAttachment::addBindings() {
     webViewManager.bind(
             "juce_getPluginParameters",
             [&](const choc::value::ValueView &args) -> choc::value::Value {
-                return getParameterSpec();
+                return getAllParameterSpecValue();
             });
 
     webViewManager.bind(
@@ -124,23 +126,32 @@ void imagiro::ParameterAttachment::sendStateToBrowser(imagiro::Parameter *param)
     });
 }
 
-choc::value::Value imagiro::ParameterAttachment::getParameterSpec() {
+choc::value::Value imagiro::ParameterAttachment::getAllParameterSpecValue() {
     auto params = choc::value::createEmptyArray();
     for (auto param: processor.getPluginParameters()) {
-        auto paramSpec = choc::value::createObject("param");
-        paramSpec.setMember("uid", param->getUID().toStdString());
-        paramSpec.setMember("name", param->getName(100).toStdString());
-        paramSpec.setMember("value01", param->getValue());
-        paramSpec.setMember("defaultVal01", param->getDefaultValue());
-
-        auto range = choc::value::createObject("range");
-        range.setMember("min", param->getUserRange().start);
-        range.setMember("max", param->getUserRange().end);
-        range.setMember("step", param->getUserRange().interval);
-        range.setMember("skew", param->getUserRange().skew);
-
-        paramSpec.setMember("range", range);
-        params.addArrayElement(paramSpec);
+        params.addArrayElement(getParameterSpecValue(param));
     }
     return params;
+}
+
+void imagiro::ParameterAttachment::configChanged(imagiro::Parameter *param) {
+    this->webViewManager.evaluateJavascript("window.ui.onParameterConfigChanged("
+                                            + choc::json::toString(getParameterSpecValue(param)) + ")");
+}
+
+choc::value::Value imagiro::ParameterAttachment::getParameterSpecValue(imagiro::Parameter *param) {
+    auto paramSpec = choc::value::createObject("param");
+    paramSpec.setMember("uid", param->getUID().toStdString());
+    paramSpec.setMember("name", param->getName(100).toStdString());
+    paramSpec.setMember("value01", param->getValue());
+    paramSpec.setMember("defaultVal01", param->getDefaultValue());
+
+    auto range = choc::value::createObject("range");
+    range.setMember("min", param->getUserRange().start);
+    range.setMember("max", param->getUserRange().end);
+    range.setMember("step", param->getUserRange().interval);
+    range.setMember("skew", param->getUserRange().skew);
+
+    paramSpec.setMember("range", range);
+    return paramSpec;
 }

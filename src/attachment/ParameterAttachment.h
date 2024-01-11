@@ -16,10 +16,13 @@ namespace imagiro {
         void addBindings() override;
 
         void parameterChangedSync(Parameter *param) override;
+        void configChanged(imagiro::Parameter *param) override;
 
     private:
         void sendStateToBrowser(Parameter* param);
-        choc::value::Value getParameterSpec();
+        choc::value::Value getAllParameterSpecValue();
+
+        static choc::value::Value getParameterSpecValue(Parameter* param);
 
         Parameter* ignoreCallbackParam {nullptr};
     };
