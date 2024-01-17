@@ -27,6 +27,7 @@ public:
                 .replace("-", "").toStdString();
 
         resourceName = resourceName.substr(resourceName.find_last_of("/") + 1);
+        if (isdigit(resourceName[0])) resourceName = "_" + resourceName;
 
         int resourceSize = 0;
         auto resource = BinaryData::getNamedResource(resourceName.c_str(), resourceSize);
@@ -73,7 +74,9 @@ public:
         if (extension == "js")   return "text/javascript";
         if (extension == "mjs")  return "text/javascript";
         if (extension == "svg")  return "image/svg+xml";
+        if (extension == "png")  return "image/png";
         if (extension == "wasm") return "application/wasm";
+        if (extension == "woff2") return "font/woff2";
 
         return "application/octet-stream";
     }
