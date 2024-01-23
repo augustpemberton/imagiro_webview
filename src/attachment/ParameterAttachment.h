@@ -22,7 +22,7 @@ namespace imagiro {
         void sendStateToBrowser(Parameter* param);
         choc::value::Value getAllParameterSpecValue();
 
-        static choc::value::Value getParameterSpecValue(Parameter* param);
+        static JSObject getParameterSpecValue(Parameter* param);
 
         Parameter* ignoreCallbackParam {nullptr};
     };

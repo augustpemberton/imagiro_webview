@@ -1,2 +1,7 @@
 #include "src/WebProcessor.cpp"
+#include "src/InspectorWindow.cpp"
+#include "src/filesystems/JuceFileSystem.cpp"
+#include "src/filesystems/BinaryDataFileSystem.cpp"
+#include "src/filesystems/mime-types/MimeTypes.cpp"
+#include "src/UltralightViewManager.cpp"
 #include "src/attachment/ParameterAttachment.cpp"

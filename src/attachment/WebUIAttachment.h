@@ -3,14 +3,16 @@
 //
 
 #pragma once
+#include "../UltralightUtil.h"
 
+using namespace UltralightUtil;
 namespace imagiro {
     class WebProcessor;
 
     class WebUIAttachment {
     public:
-        WebUIAttachment(WebProcessor& p, WebViewManager& w)
-        : processor(p), webViewManager(w) { }
+        WebUIAttachment(WebProcessor& p)
+        : processor(p), viewManager(p.getViewManager()) { }
 
         virtual ~WebUIAttachment() = default;
 
@@ -19,7 +21,7 @@ namespace imagiro {
 
     protected:
         WebProcessor& processor;
-        WebViewManager& webViewManager;
+        UltralightViewManager& viewManager;
 
         JUCE_LEAK_DETECTOR(WebUIAttachment)
     };

@@ -8,10 +8,9 @@
 #include <imagiro_processor/imagiro_processor.h>
 #include "WebUIAttachment.h"
 
-#include "juce_audio_devices/juce_audio_devices.h"
-#include "juce_audio_plugin_client/juce_audio_plugin_client.h"
-#include "juce_audio_utils/juce_audio_utils.h"
+#include "../WebProcessor.h"
 #include "juce_audio_plugin_client/Standalone/juce_StandaloneFilterWindow.h"
+#include <juce_audio_plugin_client/juce_audio_plugin_client.h>
 
 namespace imagiro {
     class PluginInfoAttachment : public WebUIAttachment, public VersionManager::Listener {
@@ -26,33 +25,31 @@ namespace imagiro {
         }
 
         void OnUpdateDiscovered() override {
-            webViewManager.evaluateJavascript("window.ui.updateDiscovered()");
+//            processor.getViewManager().evaluateJavascript("window.ui.updateDiscovered()");
         }
 
         void addBindings() override {
-            webViewManager.bind(
-                    "juce_getCurrentVersion",
-                    [&](const choc::value::ValueView &args) -> choc::value::Value {
-                        return choc::value::Value(processor.getVersionManager().getCurrentVersion().toStdString());
-                    }
-            );
-            webViewManager.bind(
+             viewManager.bind( "juce_getCurrentVersion", [&](const JSObject& obj, const JSArgs& args) -> JSValue {
+                    return processor.getVersionManager().getCurrentVersion().toRawUTF8();
+             });
+
+            viewManager.bind(
                     "juce_showStandaloneAudioSettings",
-                    [&](const choc::value::ValueView &args) -> choc::value::Value {
+                    [&](const JSObject& obj, const JSArgs &args) -> JSValue {
                         juce::StandalonePluginHolder::getInstance()->showAudioSettingsDialog();
                         return {};
                     }
             );
 
-            webViewManager.bind(
+            viewManager.bind(
                     "juce_getMillisecondTime",
-                    [&](const choc::value::ValueView &args) -> choc::value::Value {
-                            return choc::value::Value((juce::int64)juce::Time::getMillisecondCounter());
+                    [&](const JSObject& obj, const JSArgs &args) -> JSValue {
+                            return {(juce::int64)juce::Time::getMillisecondCounter()};
                     });
 
-            webViewManager.bind(
+            viewManager.bind(
                     "juce_getWrapperType",
-                    [&](const choc::value::ValueView &args) -> choc::value::Value {
+                    [&](const JSObject& obj, const JSArgs &args) -> JSValue {
                         std::string wrapperTypeString;
 
                         if (processor.wrapperType == juce::AudioProcessor::wrapperType_AudioUnit)
@@ -64,93 +61,93 @@ namespace imagiro {
                         else if (processor.wrapperType == juce::AudioProcessor::wrapperType_VST)
                             wrapperTypeString = "VST2";
 
-                        return choc::value::Value(wrapperTypeString);
+                        return {wrapperTypeString.c_str()};
                     }
             );
 
-            webViewManager.bind(
+            viewManager.bind(
                     "juce_getPluginName",
-                    [&](const choc::value::ValueView &args) -> choc::value::Value {
-                        return choc::value::Value(PLUGIN_NAME);
+                    [&](const JSObject& obj, const JSArgs &args) -> JSValue {
+                        return {PLUGIN_NAME};
                     }
             );
 
-            webViewManager.bind(
-                    "juce_saveInProcessor", [&](const choc::value::ValueView &args) -> choc::value::Value {
-                        auto key = std::string(args[0].getWithDefault(""));
-                        if (key.empty()) return {};
-                        auto value = std::string(args[1].getWithDefault(""));
+//            viewManager.bind(
+//                    "juce_saveInProcessor", [&](const JSObject& obj, const JSArgs &args) -> JSValue {
+//                        auto key = getStdString(args[0]);
+//                        if (key.empty()) return {};
+//                        auto value = getStdString(args[1]);
+//
+//                        processor.getWebViewData().setMember(key, value);
+//                        return {};
+//                    });
+//
+//            viewManager.bind(
+//                    "juce_loadFromProcessor", [&](const JSObject& obj, const JSArgs &args) -> JSValue {
+//                        auto key = std::string(args[0].getWithDefault(""));
+//                        if (key.empty()) return {};
+//
+//                        if (!processor.getWebViewData().hasObjectMember(key)) return {};
+//                        return processor.getWebViewData()[key];
+//                    });
 
-                        processor.getWebViewData().setMember(key, value);
-                        return {};
-                    });
-
-            webViewManager.bind(
-                    "juce_loadFromProcessor", [&](const choc::value::ValueView &args) -> choc::value::Value {
-                        auto key = std::string(args[0].getWithDefault(""));
-                        if (key.empty()) return {};
-
-                        if (!processor.getWebViewData().hasObjectMember(key)) return {};
-                        return choc::value::Value(processor.getWebViewData()[key]);
-                    });
-
-            webViewManager.bind(
+            viewManager.bind(
                     "juce_setConfig",
-                    [&](const choc::value::ValueView &args) -> choc::value::Value {
-                        auto key = args[0].toString();
-                        auto value = args[1].toString();
+                    [&](const JSObject& obj, const JSArgs &args) -> JSValue {
+                        auto key = getStdString(args[0]);
+                        auto value = getStdString(args[1]);
                         Resources::getConfigFile()->setValue(juce::String(key), juce::String(value));
                         return {};
                     }
             );
-            webViewManager.bind(
+            viewManager.bind(
                     "juce_getConfig",
-                    [&](const choc::value::ValueView &args) -> choc::value::Value {
-                        auto key = juce::String(args[0].toString());
+                    [&](const JSObject& obj, const JSArgs &args) -> JSValue {
+                        auto key = getStdString(args[0]);
                         auto configFile = Resources::getConfigFile();
                         if (!configFile->containsKey(key)) return {};
 
                         auto val = configFile->getValue(key);
-                        return choc::value::Value(val.toStdString());
+                        return {val.toRawUTF8()};
                     }
             );
-            webViewManager.bind(
+            viewManager.bind(
                     "juce_getIsUpdateAvailable",
-                    [&](const choc::value::ValueView &args) -> choc::value::Value {
+                    [&](const JSObject& obj, const JSArgs &args) -> JSValue {
                         auto newVersion = processor.getVersionManager().isUpdateAvailable();
                         if (!newVersion) return {};
 
-                        return choc::value::Value(newVersion->toStdString());
+                        return {newVersion->toRawUTF8()};
                     }
             );
-            webViewManager.bind( "juce_revealUpdate",
-                                 [&](const choc::value::ValueView &args) -> choc::value::Value {
+            viewManager.bind( "juce_revealUpdate",
+                                 [&](const JSObject& obj, const JSArgs &args) -> JSValue {
                                      juce::URL(processor.getVersionManager().getUpdateURL()).launchInDefaultBrowser();
                                      return {};
                                  } );
 
-            webViewManager.bind("juce_getIsDebug",
-                                [&](const choc::value::ValueView& args) -> choc::value::Value {
+            viewManager.bind("juce_getIsDebug",
+                                [&](const JSObject& obj, const JSArgs& args) -> JSValue {
 #if JUCE_DEBUG
-                                    return choc::value::Value(true);
+                                    return true;
 #else
-                                    return choc::value::Value(false);
+                                    return false;
 #endif
                                 });
 
-            webViewManager.bind("juce_getPlatform",
-                                [&](const choc::value::ValueView& args) -> choc::value::Value {
+            viewManager.bind("juce_getPlatform",
+                                [&](const JSObject& obj, const JSArgs& args) -> JSValue {
                                     if ((juce::SystemStats::getOperatingSystemType() & juce::SystemStats::Windows) != 0) {
-                                        return choc::value::Value("windows");
+                                        return {"windows"};
                                     } else if ((juce::SystemStats::getOperatingSystemType() & juce::SystemStats::MacOSX) != 0) {
-                                        return choc::value::Value("macOS");
+                                        return {"macOS"};
                                     } else {
-                                        return choc::value::Value(juce::SystemStats::getOperatingSystemName().toStdString());
+                                        return {juce::SystemStats::getOperatingSystemName().toRawUTF8()};
                                     }
                                 });
 
-            webViewManager.bind("juce_getDebugVersionString",
-                                [&](const choc::value::ValueView& args) -> choc::value::Value {
+            viewManager.bind("juce_getDebugVersionString",
+                                [&](const JSObject& obj, const JSArgs& args) -> JSValue {
                                     juce::String statusString = " ";
 
                                     if (juce::String(git_branch_str) != "master" && juce::String(git_branch_str) != "main") {
@@ -160,20 +157,20 @@ namespace imagiro {
                                     if (git_dirty_str) statusString += "!";
                                     statusString += " (" + juce::String(build_date_str) + ")";
 
-                                    return choc::value::Value(statusString.toStdString());
+                                    return statusString.toRawUTF8();
                                 }
             );
 
-            webViewManager.bind(
+            viewManager.bind(
                     "juce_getCpuLoad",
-                    [&](const choc::value::ValueView &args) -> choc::value::Value {
-                        return choc::value::Value(processor.getCpuLoad());
+                    [&](const JSObject& obj, const JSArgs &args) -> JSValue {
+                        return processor.getCpuLoad();
                     }
             );
-            webViewManager.bind(
+            viewManager.bind(
                     "juce_Log",
-                    [&](const choc::value::ValueView &args) -> choc::value::Value {
-                        auto string = args[0].getWithDefault("");
+                    [&](const JSObject& obj, const JSArgs &args) -> JSValue {
+                        auto string = toStdString(args[0]);
                         juce::Logger::outputDebugString(string);
                         return {};
                     });

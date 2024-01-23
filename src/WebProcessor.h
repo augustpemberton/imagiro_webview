@@ -3,46 +3,53 @@
 //
 
 #pragma once
+#include <version.h>
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <imagiro_processor/imagiro_processor.h>
 
-#include "WebViewManager.h"
+#include <Ultralight/Ultralight.h>
+#include "filesystems/BinaryDataFileSystem.h"
+#include "UltralightViewManager.h"
 
-#include <memory>
 
 namespace imagiro {
-class WebUIPluginEditor;
-class WebUIAttachment;
+    class WebUIPluginEditor;
+    class WebUIAttachment;
 
-class WebProcessor : public Processor {
-public:
-    WebProcessor(juce::String currentVersion = "1.0.0", juce::String productSlug = "");
-    WebProcessor(const juce::AudioProcessor::BusesProperties& ioLayouts,
-              juce::String currentVersion = "1.0.0", juce::String productSlug = "");
+    class WebProcessor : public Processor {
+    public:
+        WebProcessor(juce::String currentVersion = "1.0.0", juce::String productSlug = "");
 
-    WebViewManager& getWebViewManager() { return webView; }
-    juce::AudioProcessorEditor* createEditor() override;
+        WebProcessor(const BusesProperties &ioLayouts,
+                     juce::String currentVersion = "1.0.0", juce::String productSlug = "");
 
-    virtual juce::Point<int> getDefaultWindowSize() { return {400, 300}; }
+        juce::AudioProcessorEditor *createEditor() override;
 
-    virtual juce::Point<int> getResizeMin() { return {200, 200}; }
-    virtual juce::Point<int> getResizeMax() { return {1500, 1500}; }
+        virtual juce::Point<int> getDefaultWindowSize() { return {400, 300}; }
+        virtual juce::Point<int> getResizeMin() { return {200, 200}; }
+        virtual juce::Point<int> getResizeMax() { return {1500, 1500}; }
 
-    virtual bool isResizable() { return false; }
+        virtual bool isResizable() { return false; }
+        virtual bool allowInspector() { return JUCE_DEBUG; }
 
-    void addUIAttachment(WebUIAttachment& attachment);
+        // Location of your HTML/JS/CSS resources. Can be anywhere on your machine.
+        inline static std::string JS_RESOURCES_PATH = std::string(SRCPATH) + "/ui/dist/";
+        inline static std::string ULTRALIGHT_SDK_PATH = std::string(SRCPATH) + "/../modules/ultralight/";
 
-    choc::value::Value& getWebViewData() { return webViewCustomData; }
+        // Location of the Ultralight SDK resources.
+        inline static ultralight::String ULTRALIGHT_RESOURCES_PREFIX = "../../../modules/ultralight/resources/";
 
-protected:
-    WebViewManager webView;
-    std::vector<std::unique_ptr<WebUIAttachment>> uiAttachments;
+        inline static ultralight::RefPtr<ultralight::Renderer> RENDERER = nullptr;
+        inline static BinaryDataFileSystem fileSystem;
 
-    choc::value::Value webViewCustomData {choc::value::createObject("CustomData")};
+        UltralightViewManager& getViewManager() { return viewManager; }
 
-private:
-    void addUIAttachment(std::unique_ptr<WebUIAttachment> attachment);
-    void init();
-};
+    private:
+        void init();
+        void addUIAttachment(std::unique_ptr<WebUIAttachment> attachment);
 
+        std::vector<std::unique_ptr<WebUIAttachment>> baseAttachments;
+
+        UltralightViewManager viewManager;
+    };
 } // namespace imagiro
