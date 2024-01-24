@@ -30,7 +30,13 @@ namespace imagiro {
         virtual juce::Point<int> getResizeMax() { return {1500, 1500}; }
 
         virtual bool isResizable() { return false; }
-        virtual bool allowInspector() { return JUCE_DEBUG; }
+        virtual bool allowInspector() {
+#if JUCE_DEBUG
+            return true;
+#else
+            return false;
+#endif
+        }
 
         // Location of your HTML/JS/CSS resources. Can be anywhere on your machine.
         inline static std::string JS_RESOURCES_PATH = std::string(SRCPATH) + "/ui/dist/";

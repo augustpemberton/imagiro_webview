@@ -11,15 +11,16 @@ namespace imagiro {
         using WebUIAttachment::WebUIAttachment;
 
         void addBindings() override {
-            webViewManager.bind("juce_requestFileChooser",
-            [&](const choc::value::ValueView& args) -> choc::value::Value {
-                webViewManager.requestFileChooser(args[0].toString());
+            viewManager.bind("juce_requestFileChooser",
+            [&](const JSObject& obj, const JSArgs& args) -> JSValue {
+                // TODO
+//                viewManager.requestFileChooser(args[0].toString());
                 return {};
             });
 
-            webViewManager.bind("juce_revealPath",
-            [&](const choc::value::ValueView& args) -> choc::value::Value {
-                auto path = args[0].toString();
+            viewManager.bind("juce_revealPath",
+            [&](const JSObject& obj, const JSArgs& args) -> JSValue {
+                auto path = getStdString(args[0]);
                 auto file = juce::File(path);
                 if (!file.exists()) return {};
 
@@ -27,18 +28,16 @@ namespace imagiro {
                 return {};
             });
 
-            webViewManager.bind("juce_copyToClipboard",
-                [&](const choc::value::ValueView& args) -> choc::value::Value {
-                    juce::SystemClipboard::copyTextToClipboard(args[0].toString());
+            viewManager.bind("juce_copyToClipboard",
+                [&](const JSObject& obj, const JSArgs& args) -> JSValue {
+                    juce::SystemClipboard::copyTextToClipboard(getStdString(args[0]));
                     return {};
                 }
             );
 
-            webViewManager.bind("juce_getTextFromClipboard",
-                [&](const choc::value::ValueView& args) -> choc::value::Value {
-                    return choc::value::Value(
-                            juce::SystemClipboard::getTextFromClipboard().toStdString()
-                    );
+            viewManager.bind("juce_getTextFromClipboard",
+                [&](const JSObject& obj, const JSArgs& args) -> JSValue {
+                    return {juce::SystemClipboard::getTextFromClipboard().toRawUTF8()};
                 }
             );
         }

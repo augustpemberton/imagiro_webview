@@ -27,7 +27,6 @@ namespace imagiro {
                   view(v),
                   allowInspector(inspector)
         {
-
             view->Focus();
             view->set_view_listener(this);
 
@@ -47,9 +46,9 @@ namespace imagiro {
         void loadHTML(const juce::String& html) {
             view->LoadURL(ultralight::String(html.toRawUTF8()));
         }
-
     private:
         void timerCallback() override {
+            updateDisplayScaleIfNeeded();
             repaint();
         }
 
@@ -68,27 +67,44 @@ namespace imagiro {
         }
 
         void paint(juce::Graphics &g) override {
+            g.fillAll(juce::Colour(234, 229, 219));
             RenderFrame(g);
         }
 
 
         void resized() override {
+            updateDisplayScaleIfNeeded();
+            updateViewSize();
+        }
+
+        void updateViewSize() {
             auto w = getWidth();
             auto h = getHeight();
-            auto deviceScale = juce::Desktop::getInstance().getDisplays().getPrimaryDisplay()->scale;
-            view->set_device_scale(deviceScale);
 
             if (view.get() != nullptr){
                 // Update Ultralight view size
-                view->Resize(static_cast<uint32_t>(w * view->device_scale()),
-                             static_cast<uint32_t>(h * view->device_scale()));
+                view->Resize(static_cast<uint32_t>(w * this->dpiScale),
+                             static_cast<uint32_t>(h * this->dpiScale));
                 view->Focus();
             }
+        }
+
+        void updateDisplayScaleIfNeeded() {
+            auto currentDisplay = juce::Desktop::getInstance().getDisplays().getDisplayForRect(
+                    getTopLevelComponent()->getScreenBounds());
+
+            auto deviceScale = currentDisplay->scale;
+            if (almostEqual(deviceScale, this->dpiScale)) return;
+
+            this->dpiScale = deviceScale;
+            view->set_device_scale(deviceScale);
+            updateViewSize();
         }
 
         void RenderFrame(juce::Graphics &g) {
             renderer->Update();
             renderer->Render();
+//            renderer->RefreshDisplay(view->display_id()); // ultralight v1.4
 
             const auto surface = dynamic_cast<BitmapSurface *>(view->surface());
 
@@ -140,6 +156,19 @@ namespace imagiro {
             repaint();
         }
 
+        void mouseDrag(const juce::MouseEvent &event) override {
+            auto button = event.mods.isLeftButtonDown() ? MouseEvent::kButton_Left
+                                                        : MouseEvent::kButton_Right;
+            view->FireMouseEvent({
+                                         MouseEvent::kType_MouseMoved,
+                                         event.x, event.y,
+                                         button
+                                 });
+
+            repaint();
+        }
+
+
         void mouseUp(const juce::MouseEvent &event) override {
             auto button = event.mods.isLeftButtonDown() ? MouseEvent::kButton_Left
                                                         : MouseEvent::kButton_Right;
@@ -159,6 +188,29 @@ namespace imagiro {
             repaint();
         }
 
+        bool keyStateChanged(bool isKeyDown) override {
+            for (auto it = keysDown.begin(); it != keysDown.end();) {
+                auto keyPress = juce::KeyPress(*it);
+                if (!keyPress.isCurrentlyDown()) {
+                    sendKeyUpEvent(keyPress);
+                    it = keysDown.erase(it);
+                } else ++it;
+            }
+        }
+
+        void sendKeyUpEvent(juce::KeyPress key) {
+            DBG("sending key up " << key.getTextDescription());
+            ultralight::KeyEvent evt;
+
+            // Special keys
+            evt.type = ultralight::KeyEvent::kType_KeyUp;
+            evt.virtual_key_code = UltralightUtil::mapJUCEKeyCodeToUltralight(key.getKeyCode());
+            evt.native_key_code = 0;
+            evt.modifiers = 0;
+            GetKeyIdentifierFromVirtualKeyCode(evt.virtual_key_code, evt.key_identifier);
+            view->FireKeyEvent(evt);
+        }
+
         bool keyPressed(const juce::KeyPress &key, Component *originatingComponent) override {
 
             if (allowInspector &&
@@ -171,6 +223,8 @@ namespace imagiro {
                     return true;
                 }
             }
+
+            keysDown.insert(key.getKeyCode());
 
             // Check if key character contains only single letter or number
             std::regex regexPattern(R"([A-Za-z0-9`\-=[\\\];',./~!@#$%^&*()_+{}|:"<>?\u0020])");
@@ -206,6 +260,12 @@ namespace imagiro {
 
         juce::Image frame;
         std::unique_ptr<InspectorWindow> inspector;
+
+        std::unordered_set<int> keysDown;
+
+        bool domReady {false};
+
+        double dpiScale;
         bool allowInspector;
     };
 }

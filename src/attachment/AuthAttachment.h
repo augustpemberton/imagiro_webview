@@ -11,42 +11,42 @@ namespace imagiro {
         using WebUIAttachment::WebUIAttachment;
 
         void addBindings() override {
-            webViewManager.bind( "juce_getIsAuthorized",
-                                 [&](const choc::value::ValueView &args) -> choc::value::Value {
-                                     return choc::value::Value(processor.getAuthManager().isAuthorized());
+            viewManager.bind( "juce_getIsAuthorized",
+                                 [&](const JSObject& obj, const JSArgs &args) -> JSValue {
+                                     return {processor.getAuthManager().isAuthorized()};
                                  }
             );
 
-            webViewManager.bind( "juce_getDemoStarted",
-                                 [&](const choc::value::ValueView &args) -> choc::value::Value {
-                                     return choc::value::Value(processor.getAuthManager().hasDemoStarted());
+            viewManager.bind( "juce_getDemoStarted",
+                                 [&](const JSObject& obj, const JSArgs &args) -> JSValue {
+                                     return {processor.getAuthManager().hasDemoStarted()};
                                  }
             );
 
-            webViewManager.bind( "juce_getDemoFinished",
-                                 [&](const choc::value::ValueView &args) -> choc::value::Value {
-                                     return choc::value::Value(processor.getAuthManager().hasDemoFinished());
+            viewManager.bind( "juce_getDemoFinished",
+                                 [&](const JSObject& obj, const JSArgs &args) -> JSValue {
+                                     return {processor.getAuthManager().hasDemoFinished()};
                                  }
             );
 
-            webViewManager.bind( "juce_getDemoTimeLeftSeconds",
-                                 [&](const choc::value::ValueView &args) -> choc::value::Value {
-                                     return choc::value::Value(processor.getAuthManager().getDemoTimeLeft().inSeconds());
+            viewManager.bind( "juce_getDemoTimeLeftSeconds",
+                                 [&](const JSObject& obj, const JSArgs &args) -> JSValue {
+                                     return {processor.getAuthManager().getDemoTimeLeft().inSeconds()};
                                  }
             );
 
-            webViewManager.bind( "juce_startDemo",
-                                 [&](const choc::value::ValueView &args) -> choc::value::Value {
+            viewManager.bind( "juce_startDemo",
+                                 [&](const JSObject& obj, const JSArgs &args) -> JSValue {
                                      processor.getAuthManager().startDemo();
                                      return {};
                                  }
             );
 
-            webViewManager.bind( "juce_tryAuthorize",
-                                 [&](const choc::value::ValueView &args) -> choc::value::Value {
-                                     auto serial = args[0].toString();
+            viewManager.bind( "juce_tryAuthorize",
+                                 [&](const JSObject& obj, const JSArgs &args) -> JSValue {
+                                     auto serial = getStdString(args[0]);
                                      auto success = processor.getAuthManager().tryAuth(serial);
-                                     return choc::value::createBool(success);
+                                     return {success};
                                  }
             );
         }

@@ -4,6 +4,9 @@
 
 #include "attachment/PluginInfoAttachment.h"
 #include "attachment/ParameterAttachment.h"
+#include "attachment/FileIOAttachment.h"
+#include "attachment/AuthAttachment.h"
+#include "attachment/PresetAttachment.h"
 
 namespace imagiro {
     WebProcessor::WebProcessor(juce::String currentVersion, juce::String productSlug)
@@ -40,7 +43,7 @@ namespace imagiro {
         if (RENDERER.get() == nullptr) {
             Config config;
             config.resource_path_prefix = ULTRALIGHT_RESOURCES_PREFIX;
-            config.user_stylesheet = "";
+            config.user_stylesheet = "body { -webkit-user-select: none; user-select: none; }";
 
             Platform::instance().set_config(config);
             Platform::instance().set_font_loader(GetPlatformFontLoader());
@@ -50,11 +53,11 @@ namespace imagiro {
             RENDERER = Renderer::Create();
         }
 
-         addUIAttachment(std::make_unique<ParameterAttachment>(*this, webView));
-        // addUIAttachment(std::make_unique<PresetAttachment>(*this, webView));
+         addUIAttachment(std::make_unique<ParameterAttachment>(*this));
+         addUIAttachment(std::make_unique<PresetAttachment>(*this));
          addUIAttachment(std::make_unique<PluginInfoAttachment>(*this));
-        // addUIAttachment(std::make_unique<AuthAttachment>(*this, webView));
-        // addUIAttachment(std::make_unique<FileIOAttachment>(*this, webView));
+         addUIAttachment(std::make_unique<AuthAttachment>(*this));
+         addUIAttachment(std::make_unique<FileIOAttachment>(*this));
     }
 
     void WebProcessor::addUIAttachment(std::unique_ptr<WebUIAttachment> attachment) {

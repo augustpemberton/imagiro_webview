@@ -21,11 +21,14 @@ namespace imagiro {
             setSize(400, 300);
             addAndMakeVisible(browser);
 
-//            browser.loadURL("file:///index.html");
+#if JUCE_DEBUG
             browser.loadURL("http://localhost:4342");
+#else
+            browser.loadURL("file:///index.html");
+#endif
         }
 
-        ~WebUIPluginEditor() {
+        ~WebUIPluginEditor() override {
             processor.getViewManager().removeView(view);
         }
 

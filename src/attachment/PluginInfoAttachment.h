@@ -25,7 +25,7 @@ namespace imagiro {
         }
 
         void OnUpdateDiscovered() override {
-//            processor.getViewManager().evaluateJavascript("window.ui.updateDiscovered()");
+            processor.getViewManager().evaluateWindowFunction("updateDiscovered");
         }
 
         void addBindings() override {

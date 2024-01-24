@@ -4,10 +4,10 @@
 
 #pragma once
 #include "../UltralightUtil.h"
+#include "../WebProcessor.h"
 
 using namespace UltralightUtil;
 namespace imagiro {
-    class WebProcessor;
 
     class WebUIAttachment {
     public:

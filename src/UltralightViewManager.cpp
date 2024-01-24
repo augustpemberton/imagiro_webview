@@ -32,9 +32,11 @@ namespace imagiro {
     }
 
     void UltralightViewManager::evaluateJS(const std::string& js) {
-        for (auto& view : activeViews) {
-            view->EvaluateScript(js.c_str());
-        }
+        juce::MessageManager::callAsync([&]() {
+            for (auto &view: activeViews) {
+                view->EvaluateScript(js.c_str());
+            }
+        });
     }
 
     void UltralightViewManager::bindFnToView(ultralight::View &view, const std::string& name, CallbackFn& fn) {
@@ -43,5 +45,10 @@ namespace imagiro {
 
         JSObject global = JSGlobalObject();
         global[name.c_str()] = (JSCallbackWithRetval)fn;
+    }
+    std::optional<JSValueRef> UltralightViewManager::evaluateWindowFunction(const std::string& functionName, const JSArgs& args) {
+        for (auto& view : activeViews) {
+            return UltralightUtil::evaluateWindowFunctionInContext(*view->LockJSContext(), functionName, args);
+        }
     }
 }

@@ -16,6 +16,8 @@ namespace imagiro {
 
         void removeView(RefPtr<View> v);
 
+        std::optional<JSValueRef> evaluateWindowFunction(const std::string& functionName, const JSArgs& args = {});
+
     private:
         std::vector<std::pair<std::string, CallbackFn>> bindFns;
         std::list<RefPtr<View>> activeViews;

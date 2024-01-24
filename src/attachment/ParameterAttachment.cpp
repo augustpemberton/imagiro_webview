@@ -18,85 +18,81 @@ imagiro::ParameterAttachment::~ParameterAttachment() {
 }
 
 void imagiro::ParameterAttachment::addBindings() {
-    webViewManager.bind(
+    viewManager.bind(
             "juce_updatePluginParameter",
-            [&](const choc::value::ValueView &args) -> choc::value::Value {
-                auto payload = args[0];
+            [&](const JSObject& obj, const JSArgs &args) -> JSValue {
+                auto uid = getStdString(args[0]);
+                auto value01 = args[1].ToNumber();
 
-                auto paramID = payload["uid"].toString();
-                auto newValue01 = juce::String(payload["value01"].toString()).getFloatValue();
-                if (isnan(newValue01)) return {};
-
-                auto param = processor.getParameter(paramID);
+                auto param = processor.getParameter(uid);
                 if (param) {
                     juce::ScopedValueSetter<Parameter*> svs (ignoreCallbackParam, param);
-                    param->setValueNotifyingHost(newValue01);
+                    param->setValueNotifyingHost(static_cast<float>(value01));
                 }
 
-                return choc::value::Value(param->getValue());
+                return param ? param->getValue() : 0;
             });
 
-    webViewManager.bind(
+    viewManager.bind(
             "juce_startPluginParameterGesture",
-            [&](const choc::value::ValueView &args) -> choc::value::Value {
-                auto param = processor.getParameter(args[0].toString());
+            [&](const JSObject& obj, const JSArgs &args) -> JSValue {
+                auto param = processor.getParameter(getStdString(args[0]));
                 if (param) param->beginChangeGesture();
                 return {};
             });
-    webViewManager.bind(
+    viewManager.bind(
             "juce_endPluginParameterGesture",
-            [&](const choc::value::ValueView &args) -> choc::value::Value {
-                auto param = processor.getParameter(args[0].toString());
+            [&](const JSObject& obj, const JSArgs &args) -> JSValue {
+                auto param = processor.getParameter(getStdString(args[0]));
                 if (param) param->endChangeGesture();
                 return {};
             });
 
-    webViewManager.bind(
+    viewManager.bind(
             "juce_getPluginParameters",
-            [&](const choc::value::ValueView &args) -> choc::value::Value {
-                return getAllParameterSpecValue();
+            [&](const JSObject& obj, const JSArgs &args) -> JSValue {
+                return {getAllParameterSpecValue()};
             });
 
-    webViewManager.bind(
+    viewManager.bind(
             "juce_getDisplayValue",
-            [&](const choc::value::ValueView &args) -> choc::value::Value {
-                auto param = processor.getParameter(args[0].toString());
+            [&](const JSObject& obj, const JSArgs &args) -> JSValue {
+                auto param = processor.getParameter(getStdString(args[0]));
                 if (!param) return {};
 
                 auto v = param->getValue();
                 if (args.size() > 1) {
-                    v = args[1].getWithDefault(0.f);
+                    v = static_cast<float>(args[1].ToNumber());
                 }
 
                 auto userVal = param->convertFrom0to1(v);
-                auto val = choc::value::createObject("displayValue");
-                auto displayVal = param->getDisplayValueForUserValue(userVal);
-                val.setMember("value", displayVal.value.toStdString());
-                val.setMember("suffix", displayVal.suffix.toStdString());
 
-                return val;
+                auto displayVal = param->getDisplayValueForUserValue(userVal);
+
+                JSObject val;
+                val["value"] = displayVal.value.toRawUTF8();
+                val["suffix"] = displayVal.suffix.toRawUTF8();
+                return {val};
             });
 
-    webViewManager.bind(
+    viewManager.bind(
             "juce_textToValue",
-            [&](const choc::value::ValueView &args) -> choc::value::Value {
-                auto paramID = juce::String(args[0].toString());
-                auto displayValue = juce::String(args[1].toString());
-                auto param = processor.getParameter(paramID);
+            [&](const JSObject& obj, const JSArgs &args) -> JSValue {
+                auto param = processor.getParameter(getStdString(args[0]));
+                auto displayValue = getStdString(args[1]);
                 if (!param) return {};
 
                 auto val = param->getConfig()->valueFunction(*param, displayValue);
-                return choc::value::Value(val);
+                return {val};
             });
 
-    webViewManager.bind(
+    viewManager.bind(
             "juce_setDisplayValue",
-            [&](const choc::value::ValueView &args) -> choc::value::Value {
-                auto paramID = juce::String(args[0].toString());
-                auto displayValue = juce::String(args[1].toString());
-                auto param = processor.getParameter(paramID);
+            [&](const JSObject& obj, const JSArgs &args) -> JSValue {
+                auto param = processor.getParameter(getStdString(args[0]));
                 if (!param) return {};
 
+                auto displayValue = getStdString(args[1]);
                 auto val = param->getConfig()->valueFunction(*param, displayValue);
                 param->setUserValueAsUserAction(val);
                 sendStateToBrowser(param);
@@ -113,45 +109,42 @@ void imagiro::ParameterAttachment::parameterChangedSync(imagiro::Parameter *para
 }
 
 void imagiro::ParameterAttachment::sendStateToBrowser(imagiro::Parameter *param) {
-    auto uid = param->getUID();
+    auto uid = param->getUID().toRawUTF8();
     auto value = param->getValue();
     juce::MessageManager::callAsync([&, uid, value]() {
-        auto *obj = new juce::DynamicObject();
-        obj->setProperty("uid", uid);
-        obj->setProperty("value01", value);
-
-        juce::var json(obj);
-        auto jsonString = juce::JSON::toString(json);
-        this->webViewManager.evaluateJavascript("window.ui.updateParameterState(" + jsonString.toStdString() + ")");
+        JSArgs args {uid, value};
+        this->viewManager.evaluateWindowFunction("updateParameterState", args);
     });
 }
 
-choc::value::Value imagiro::ParameterAttachment::getAllParameterSpecValue() {
-    auto params = choc::value::createEmptyArray();
+JSArray imagiro::ParameterAttachment::getAllParameterSpecValue() {
+    JSArray params;
     for (auto param: processor.getPluginParameters()) {
-        params.addArrayElement(getParameterSpecValue(param));
+        params.push({getParameterSpecValue(param)});
     }
     return params;
 }
 
 void imagiro::ParameterAttachment::configChanged(imagiro::Parameter *param) {
-    this->webViewManager.evaluateJavascript("window.ui.onParameterConfigChanged("
-                                            + choc::json::toString(getParameterSpecValue(param)) + ")");
+    auto specValue = getParameterSpecValue(param);
+
+    JSArgs args {{getParameterSpecValue(param)}};
+    this->viewManager.evaluateWindowFunction("onParameterConfigChanged", args);
 }
 
-choc::value::Value imagiro::ParameterAttachment::getParameterSpecValue(imagiro::Parameter *param) {
-    auto paramSpec = choc::value::createObject("param");
-    paramSpec.setMember("uid", param->getUID().toStdString());
-    paramSpec.setMember("name", param->getName(100).toStdString());
-    paramSpec.setMember("value01", param->getValue());
-    paramSpec.setMember("defaultVal01", param->getDefaultValue());
+JSObject imagiro::ParameterAttachment::getParameterSpecValue(imagiro::Parameter *param) {
+    JSObject paramSpec;
+    paramSpec["uid"] = param->getUID().toRawUTF8();
+    paramSpec["name"] = param->getName(100).toRawUTF8();
+    paramSpec["value01"] = param->getValue();
+    paramSpec["defaultVal01"] = param->getDefaultValue();
 
-    auto range = choc::value::createObject("range");
-    range.setMember("min", param->getUserRange().start);
-    range.setMember("max", param->getUserRange().end);
-    range.setMember("step", param->getUserRange().interval);
-    range.setMember("skew", param->getUserRange().skew);
+    JSObject range;
+    range["min"] = param->getUserRange().start;
+    range["max"] = param->getUserRange().end;
+    range["step"] = param->getUserRange().interval;
+    range["skew"] = param->getUserRange().skew;
 
-    paramSpec.setMember("range", range);
+    paramSpec["range"] = (JSObjectRef) range;
     return paramSpec;
 }

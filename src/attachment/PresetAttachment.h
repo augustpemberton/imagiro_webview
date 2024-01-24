@@ -5,6 +5,7 @@
 #pragma once
 #include "WebUIAttachment.h"
 #include <imagiro_processor/imagiro_processor.h>
+#include <choc/text/choc_JSON.h>
 
 namespace imagiro {
     class PresetAttachment : public WebUIAttachment, public Processor::PresetListener {
@@ -19,47 +20,54 @@ namespace imagiro {
         }
 
         void addBindings() override {
-            webViewManager.bind(
+            viewManager.bind(
                     "juce_getActivePreset",
-                    [&](const choc::value::ValueView &args) -> choc::value::Value {
+                    [&](const JSObject& obj, const JSArgs &args) -> JSValue {
                         if (!processor.lastLoadedPreset) return {};
-                        return processor.lastLoadedPreset->getState();
+                        auto presetChoc = processor.lastLoadedPreset->getState();
+                        auto presetJS = toJSVal(presetChoc);
+                        return presetJS;
                     }
             );
-            webViewManager.bind(
+            viewManager.bind(
                     "juce_getAvailablePresets",
-                    [&](const choc::value::ValueView &args) -> choc::value::Value {
-                        auto reloadCache = args[0].getWithDefault(false);
+                    [&](const JSObject& obj, const JSArgs &args) -> JSValue {
+                        auto reloadCache = args[0].ToBoolean();
                         if (reloadCache) resources->reloadPresetsMap();
                         auto presets = resources->getPresets(false);
 
-                        auto presetState = choc::value::createObject("Presets");
+                        JSObject presetsJS;
                         for (const auto& category : presets) {
-                            auto categoryState = choc::value::createEmptyArray();
+                            JSArray categoryJS;
                             for (auto& fbp : category.second) {
-                                categoryState.addArrayElement(fbp.getState());
+                                DBG("loading");
+                                auto presetChoc = fbp.getState();
+                                auto presetJS = toJSVal(presetChoc);
+
+                                categoryJS.push(presetJS);
                             }
-                            presetState.addMember(category.first.toStdString(), categoryState);
+                            presetsJS[category.first.toRawUTF8()] = JSValue(categoryJS);
                         }
-                        return presetState;
+
+                        return {presetsJS};
                     }
             );
 
-            webViewManager.bind(
+            viewManager.bind(
                     "juce_createPreset",
-                    [&](const choc::value::ValueView &args) -> choc::value::Value {
-                        auto name = args[0].toString();
-                        auto category = args[1].toString();
+                    [&](const JSObject& obj, const JSArgs &args) -> JSValue {
+                        auto name = getStdString(args[0]);
+                        auto category = getStdString(args[1]);
                         auto preset = processor.createPreset(name, false);
                         FileBackedPreset::save(preset, category);
-                        webViewManager.evaluateJavascript("window.ui.reloadPresets()");
+                        viewManager.evaluateWindowFunction("reloadPresets");
                         return {};
                     }
             );
 
-            webViewManager.bind(
+            viewManager.bind(
                     "juce_getCurrentSettingsAsPreset",
-                    [&](const choc::value::ValueView &args) -> choc::value::Value {
+                    [&](const JSObject& obj, const JSArgs &args) -> JSValue {
                         auto time = juce::Time();
                         auto preset = processor.createPreset(
                                 juce::String(time.getDayOfMonth()) +
@@ -70,24 +78,26 @@ namespace imagiro {
                                 true
                         );
 
-                        return preset.getState();
+                        auto presetChoc = preset.getState();
+                        auto presetJS = toJSVal(presetChoc);
+                        return presetJS;
                     }
             );
 
-            webViewManager.bind(
+            viewManager.bind(
                     "juce_setPresetFromString",
-                    [&](const choc::value::ValueView &args) -> choc::value::Value {
-                        auto preset = Preset::fromState(args[0]);
+                    [&](const JSObject& obj, const JSArgs &args) -> JSValue {
+                        auto preset = Preset::fromState(toChocVal(args[0]));
                         processor.queuePreset(preset);
                         return {};
                     }
             );
 
 
-            webViewManager.bind(
+            viewManager.bind(
                     "juce_deletePreset",
-                    [&](const choc::value::ValueView &args) -> choc::value::Value {
-                        auto relpath = args[0].toString();
+                    [&](const JSObject& obj, const JSArgs &args) -> JSValue {
+                        auto relpath = getStdString(args[0]);
                         auto presetFile = resources->getPresetsFolder().getChildFile(relpath);
                         if (!presetFile.exists()) return {};
 
@@ -97,11 +107,11 @@ namespace imagiro {
                     }
             );
 
-            webViewManager.bind(
+            viewManager.bind(
                     "juce_favoritePreset",
-                    [&](const choc::value::ValueView &args) -> choc::value::Value {
-                        auto relpath = args[0].toString();
-                        auto shouldFavorite = args[1].getWithDefault(true);
+                    [&](const JSObject& obj, const JSArgs &args) -> JSValue {
+                        auto relpath = getStdString(args[0]);
+                        auto shouldFavorite = args[1].ToBoolean();
 
                         auto presetFile = resources->getPresetsFolder().getChildFile(relpath);
                         if (!presetFile.exists()) return {};
@@ -112,10 +122,10 @@ namespace imagiro {
                     }
             );
 
-            webViewManager.bind(
+            viewManager.bind(
                     "juce_loadPreset",
-                    [&](const choc::value::ValueView &args) -> choc::value::Value {
-                        auto relpath = args[0].toString();
+                    [&](const JSObject& obj, const JSArgs &args) -> JSValue {
+                        auto relpath = getStdString(args[0]);
                         auto presetFile = resources->getPresetsFolder().getChildFile(relpath);
                         if (!presetFile.exists()) return {};
                         auto preset = FileBackedPreset::createFromFile(presetFile);
@@ -125,9 +135,9 @@ namespace imagiro {
                     }
             );
 
-            webViewManager.bind(
+            viewManager.bind(
                     "juce_nextPreset",
-                    [&](const choc::value::ValueView &args) -> choc::value::Value {
+                    [&](const JSObject& obj, const JSArgs &args) -> JSValue {
                         auto presetsList = resources->getPresetsList();
                         if (presetsList.empty()) return {};
 
@@ -141,9 +151,9 @@ namespace imagiro {
                         return {};
                     }
             );
-            webViewManager.bind(
+            viewManager.bind(
                     "juce_prevPreset",
-                    [&](const choc::value::ValueView &args) -> choc::value::Value {
+                    [&](const JSObject& obj, const JSArgs &args) -> JSValue {
                         auto presetsList = resources->getPresetsList();
                         if (presetsList.empty()) return {};
 
@@ -158,26 +168,26 @@ namespace imagiro {
                     }
             );
 
-            webViewManager.bind("juce_revealPresetsFolder",
-            [&](const choc::value::ValueView& args) -> choc::value::Value {
+            viewManager.bind("juce_revealPresetsFolder",
+            [&](const JSObject& obj, const JSArgs& args) -> JSValue {
                 resources->getPresetsFolder().revealToUser();
                 return {};
             });
 
-            webViewManager.bind(
+            viewManager.bind(
                     "juce_hasPresetBeenUpdated",
-                    [&](const choc::value::ValueView &args) -> choc::value::Value {
-                        if (!processor.lastLoadedPreset) return choc::value::Value(false);
+                    [&](const JSObject& obj, const JSArgs &args) -> JSValue {
+                        if (!processor.lastLoadedPreset) return JSValue(false);
                         auto lastLoaded = processor.lastLoadedPreset->getPreset();
                         auto current = processor.createPreset(lastLoaded.getName(),
                                                               true);
 
                         if (lastLoaded.getParamStates().size() != current.getParamStates().size())
-                            return choc::value::Value(true);
+                            return JSValue(true);
 
                         for (auto i=0; i<lastLoaded.getParamStates().size(); i++) {
                             if (lastLoaded.getParamStates()[i] != current.getParamStates()[i]) {
-                                return choc::value::Value(true);
+                                return JSValue(true);
                             }
                         }
 
@@ -186,15 +196,15 @@ namespace imagiro {
 //                        auto currentData = choc::json::toString(current.getData());
 //                        auto lastData = choc::json::toString(lastLoaded.getData());
 //                        if (currentData != lastData)
-//                            return choc::value::Value(true);
+//                            return JSValue(true);
 
-                        return choc::value::Value(false);
+                        return JSValue(false);
                     }
             );
         }
 
         void OnPresetChange(Preset &preset) override {
-            webViewManager.evaluateJavascript("window.ui.presetChanged()");
+            viewManager.evaluateWindowFunction("presetChanged", {});
         }
 
     private:
