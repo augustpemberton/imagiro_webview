@@ -21,11 +21,8 @@ void imagiro::ParameterAttachment::addBindings() {
     webViewManager.bind(
             "juce_updatePluginParameter",
             [&](const choc::value::ValueView &args) -> choc::value::Value {
-                auto payload = args[0];
-
-                auto paramID = payload["uid"].toString();
-                auto newValue01 = juce::String(payload["value01"].toString()).getFloatValue();
-                if (isnan(newValue01)) return {};
+                auto paramID = args[0].getWithDefault("");
+                auto newValue01 = args[1].getWithDefault(0.);
 
                 auto param = processor.getParameter(paramID);
                 if (param) {
