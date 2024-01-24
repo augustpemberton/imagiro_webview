@@ -35,6 +35,18 @@ void imagiro::ParameterAttachment::addBindings() {
 
                 return choc::value::Value(param->getValue());
             });
+    webViewManager.bind(
+            "juce_setPluginParameterLocked",
+            [&](const choc::value::ValueView &args) -> choc::value::Value {
+                auto uid = args[0].getWithDefault("");
+                auto locked = args[1].getWithDefault(false);
+
+                auto param = processor.getParameter(uid);
+                if (!param) return {};
+
+                param->setLocked(locked);
+                return {};
+            });
 
     webViewManager.bind(
             "juce_startPluginParameterGesture",
@@ -145,6 +157,7 @@ choc::value::Value imagiro::ParameterAttachment::getParameterSpecValue(imagiro::
     paramSpec.setMember("name", param->getName(100).toStdString());
     paramSpec.setMember("value01", param->getValue());
     paramSpec.setMember("defaultVal01", param->getDefaultValue());
+    paramSpec.setMember("locked", param->isLocked());
 
     auto range = choc::value::createObject("range");
     range.setMember("min", param->getUserRange().start);
