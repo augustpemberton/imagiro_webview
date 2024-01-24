@@ -19,16 +19,20 @@ namespace imagiro {
             public juce::Component,
             juce::Timer,
             juce::KeyListener,
+            LoadListener,
             ViewListener {
     public:
-        UltralightViewComponent(const RefPtr<View> &v, const RefPtr<Renderer> &r,
+        UltralightViewComponent(LoadListenerWrappedView &v, const RefPtr<Renderer> &r,
                                 bool inspector = false)
                 : renderer(r),
-                  view(v),
+                  loadWrappedView(v),
+                  view(loadWrappedView.getView()),
                   allowInspector(inspector)
         {
             view->Focus();
             view->set_view_listener(this);
+
+            loadWrappedView.addLoadListener(this);
 
             // Listen to keyboard presses
             addKeyListener(this);
@@ -37,6 +41,10 @@ namespace imagiro {
 
             setOpaque(true);
             startTimerHz(120);
+        }
+
+        ~UltralightViewComponent() {
+            loadWrappedView.removeLoadListener(this);
         }
 
         void loadURL(const juce::String& url) {
@@ -62,13 +70,19 @@ namespace imagiro {
             return v;
         }
 
+        void OnDOMReady(ultralight::View *caller, uint64_t frame_id, bool is_main_frame, const ultralight::String &url) override {
+            domReady = true;
+            repaint();
+        }
+
         void OnChangeCursor(ultralight::View *caller, ultralight::Cursor cursor) override {
             setMouseCursor(UltralightUtil::mapUltralightCursorToJUCE(cursor));
         }
 
         void paint(juce::Graphics &g) override {
             g.fillAll(juce::Colour(234, 229, 219));
-            RenderFrame(g);
+            RenderFrame();
+            if (domReady) PaintFrame(g);
         }
 
 
@@ -101,10 +115,13 @@ namespace imagiro {
             updateViewSize();
         }
 
-        void RenderFrame(juce::Graphics &g) {
+        void RenderFrame() {
             renderer->Update();
             renderer->Render();
 //            renderer->RefreshDisplay(view->display_id()); // ultralight v1.4
+        }
+
+        void PaintFrame(juce::Graphics &g) {
 
             const auto surface = dynamic_cast<BitmapSurface *>(view->surface());
 
@@ -256,6 +273,8 @@ namespace imagiro {
 
     private:
         RefPtr<Renderer> renderer;
+
+        LoadListenerWrappedView& loadWrappedView;
         RefPtr<View> view;
 
         juce::Image frame;

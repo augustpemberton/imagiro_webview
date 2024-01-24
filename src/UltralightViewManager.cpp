@@ -5,15 +5,16 @@
 #include "UltralightViewManager.h"
 
 namespace imagiro {
-    RefPtr<View> UltralightViewManager::createView() {
+    LoadListenerWrappedView& UltralightViewManager::createView(int width, int height) {
         auto& renderer = WebProcessor::RENDERER;
-        activeViews.push_back(UltralightUtil::CreateView(renderer));
+        activeViews.emplace_back(UltralightUtil::CreateView(renderer, width, height));
         auto& view = activeViews.back();
-        view->set_load_listener(this);
+        view.addLoadListener(this);
         return view;
     }
 
-    void UltralightViewManager::removeView(RefPtr<ultralight::View> v) {
+    void UltralightViewManager::removeView(LoadListenerWrappedView& v) {
+        v.removeLoadListener(this);
         activeViews.remove(v);
     }
 
@@ -27,14 +28,14 @@ namespace imagiro {
     void UltralightViewManager::bind(const std::string& name, CallbackFn &&fn) {
         bindFns.emplace_back(name, fn);
         for (auto& view : activeViews) {
-            bindFnToView(*view, name, fn);
+            bindFnToView(*view.getView(), name, fn);
         }
     }
 
     void UltralightViewManager::evaluateJS(const std::string& js) {
         juce::MessageManager::callAsync([&]() {
             for (auto &view: activeViews) {
-                view->EvaluateScript(js.c_str());
+                view.getView()->EvaluateScript(js.c_str());
             }
         });
     }
@@ -48,7 +49,7 @@ namespace imagiro {
     }
     std::optional<JSValueRef> UltralightViewManager::evaluateWindowFunction(const std::string& functionName, const JSArgs& args) {
         for (auto& view : activeViews) {
-            return UltralightUtil::evaluateWindowFunctionInContext(*view->LockJSContext(), functionName, args);
+            return UltralightUtil::evaluateWindowFunctionInContext(*view.getView()->LockJSContext(), functionName, args);
         }
     }
 }

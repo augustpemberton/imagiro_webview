@@ -21,7 +21,8 @@ namespace imagiro {
     }
 
     juce::AudioProcessorEditor *WebProcessor::createEditor() {
-        juce::AudioProcessorEditor *e = new WebUIPluginEditor(*this, allowInspector());
+        auto size = getDefaultWindowSize();
+        juce::AudioProcessorEditor *e = new WebUIPluginEditor(*this, size.x, size.y, allowInspector());
 
         e->setSize(getDefaultWindowSize().x, getDefaultWindowSize().y);
         if (isResizable()) {

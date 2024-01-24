@@ -7,15 +7,17 @@
 
 namespace imagiro {
     InspectorWindow::InspectorWindow(RefPtr <View> view, RefPtr <Renderer> renderer,
-                                              std::function<void()> onCloseFn)
+                                     std::function<void()> onCloseFn)
             : DocumentWindow("Inspector", juce::Colours::white, allButtons, true),
-              onClose(onCloseFn) {
+              loadWrappedView(view),
+              onClose(onCloseFn)
+    {
         setUsingNativeTitleBar(true);
         setOpaque(true);
 
         setSize(1000, 1000);
 
-        auto component = new UltralightViewComponent(view, renderer);
+        auto component = new UltralightViewComponent(loadWrappedView, renderer);
         component->setSize(1000, 1000);
 
         setContentOwned(component, true);

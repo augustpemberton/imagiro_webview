@@ -12,13 +12,13 @@
 namespace imagiro {
     class WebUIPluginEditor : public juce::AudioProcessorEditor, ViewListener {
     public:
-        WebUIPluginEditor(WebProcessor &p, bool allowInspector = false)
+        WebUIPluginEditor(WebProcessor &p, int defaultWidth = 400, int defaultHeight = 300, bool allowInspector = false)
                 : AudioProcessorEditor(p),
                   processor(p),
-                  view(p.getViewManager().createView()),
+                  view(p.getViewManager().createView(defaultWidth, defaultHeight)),
                   browser(view, WebProcessor::RENDERER, allowInspector)
         {
-            setSize(400, 300);
+            setSize(defaultWidth, defaultHeight);
             addAndMakeVisible(browser);
 
 #if JUCE_DEBUG
@@ -39,7 +39,7 @@ namespace imagiro {
 
     private:
         WebProcessor& processor;
-        RefPtr<View> view;
+        LoadListenerWrappedView& view;
 
         UltralightViewComponent browser;
     };

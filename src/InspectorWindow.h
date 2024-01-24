@@ -3,6 +3,7 @@
 //
 
 #pragma once
+#include "LoadListenerWrappedView.h"
 
 namespace imagiro {
     class InspectorWindow : public juce::DocumentWindow {
@@ -15,6 +16,7 @@ namespace imagiro {
         }
 
     private:
+        LoadListenerWrappedView loadWrappedView;
         std::function<void()> onClose;
     };
 }
