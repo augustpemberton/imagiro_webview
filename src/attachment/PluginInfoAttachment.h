@@ -17,6 +17,7 @@ namespace imagiro {
     class PluginInfoAttachment : public WebUIAttachment, public VersionManager::Listener {
     public:
         using WebUIAttachment::WebUIAttachment;
+
         void addListeners() override {
             processor.getVersionManager().addListener(this);
         }
@@ -31,106 +32,267 @@ namespace imagiro {
 
         void addBindings() override {
             webViewManager.bind(
-                    "juce_getCurrentVersion",
-                    [&](const choc::value::ValueView &args) -> choc::value::Value {
-                        return choc::value::Value(processor.getVersionManager().getCurrentVersion().toStdString());
-                    }
+                "juce_getCurrentVersion",
+                [&](const choc::value::ValueView &args) -> choc::value::Value {
+                    return choc::value::Value(processor.getVersionManager().getCurrentVersion().toStdString());
+                }
             );
             webViewManager.bind(
-                    "juce_showStandaloneAudioSettings",
-                    [&](const choc::value::ValueView &args) -> choc::value::Value {
-                        juce::StandalonePluginHolder::getInstance()->showAudioSettingsDialog();
-                        return {};
-                    }
-            );
-
-            webViewManager.bind(
-                    "juce_getMillisecondTime",
-                    [&](const choc::value::ValueView &args) -> choc::value::Value {
-                            return choc::value::Value((juce::int64)juce::Time::getMillisecondCounter());
-                    });
-
-            webViewManager.bind(
-                    "juce_getWrapperType",
-                    [&](const choc::value::ValueView &args) -> choc::value::Value {
-                        std::string wrapperTypeString;
-
-                        if (processor.wrapperType == juce::AudioProcessor::wrapperType_AudioUnit)
-                            wrapperTypeString = "AU";
-                        else if (processor.wrapperType == juce::AudioProcessor::wrapperType_Standalone)
-                            wrapperTypeString = "Standalone";
-                        else if (processor.wrapperType == juce::AudioProcessor::wrapperType_VST3)
-                            wrapperTypeString = "VST3";
-                        else if (processor.wrapperType == juce::AudioProcessor::wrapperType_VST)
-                            wrapperTypeString = "VST2";
-
-                        return choc::value::Value(wrapperTypeString);
-                    }
+                "juce_showStandaloneAudioSettings",
+                [&](const choc::value::ValueView &args) -> choc::value::Value {
+                    juce::StandalonePluginHolder::getInstance()->showAudioSettingsDialog();
+                    return {};
+                }
             );
 
             webViewManager.bind(
-                    "juce_getPluginName",
-                    [&](const choc::value::ValueView &args) -> choc::value::Value {
-                        return choc::value::Value(PLUGIN_NAME);
+                "juce_setAudioDeviceType",
+                [&](const choc::value::ValueView &args) -> choc::value::Value {
+                    auto &deviceManager = juce::StandalonePluginHolder::getInstance()->deviceManager;
+                    auto typeName = args[0].getWithDefault("");
+                    deviceManager.setCurrentAudioDeviceType(typeName, true);
+                    return {};
+                });
+
+            webViewManager.bind(
+                "juce_getAudioDeviceType",
+                [&](const choc::value::ValueView &args) -> choc::value::Value {
+                    auto &deviceManager = juce::StandalonePluginHolder::getInstance()->deviceManager;
+                    if (!deviceManager.getCurrentAudioDevice()) return choc::value::Value{std::string("")};
+                    return choc::value::Value{deviceManager.getCurrentAudioDeviceType().toStdString()};
+                });
+
+            webViewManager.bind(
+                "juce_getAudioDeviceTypes",
+                [&](const choc::value::ValueView &args) -> choc::value::Value {
+                    auto &deviceManager = juce::StandalonePluginHolder::getInstance()->deviceManager;
+
+                    auto types = choc::value::createEmptyArray();
+                    for (auto &t: deviceManager.getAvailableDeviceTypes()) {
+                        types.addArrayElement(t->getTypeName().toStdString());
                     }
+
+                    return types;
+                });
+
+            webViewManager.bind(
+                "juce_getAudioDeviceSetup",
+                [&](const choc::value::ValueView &args) -> choc::value::Value {
+                    const auto &deviceManager = juce::StandalonePluginHolder::getInstance()->deviceManager;
+                    const auto currentSetup = deviceManager.getAudioDeviceSetup();
+
+                    auto setupValue = choc::value::createObject("AudioDeviceSetup");
+                    setupValue.setMember("outputDeviceName",
+                                         choc::value::Value(currentSetup.outputDeviceName.toStdString()));
+                    setupValue.setMember("inputDeviceName",
+                                         choc::value::Value(currentSetup.inputDeviceName.toStdString()));
+                    setupValue.setMember("bufferSize", choc::value::Value(currentSetup.bufferSize));
+                    setupValue.setMember("sampleRate", choc::value::Value(currentSetup.sampleRate));
+
+                    return setupValue;
+                });
+
+            webViewManager.bind(
+                "juce_setAudioDeviceSetup",
+                [&](const choc::value::ValueView &args) -> choc::value::Value {
+                    const auto setupObj = args[0];
+
+                    auto &deviceManager = juce::StandalonePluginHolder::getInstance()->deviceManager;
+                    const auto currentSetup = deviceManager.getAudioDeviceSetup();
+
+                    auto newOutputDevice = std::string(setupObj["outputDeviceName"].getString());
+                    auto newInputDevice = std::string(setupObj["inputDeviceName"].getString());
+
+                    const juce::AudioDeviceManager::AudioDeviceSetup setup{
+                        juce::String(newOutputDevice),
+                        juce::String(newInputDevice),
+                        setupObj["sampleRate"].getWithDefault(48000.0),
+                        setupObj["bufferSize"].getWithDefault(512),
+                        currentSetup.inputChannels,
+                        currentSetup.useDefaultInputChannels,
+                        currentSetup.outputChannels,
+                        currentSetup.useDefaultOutputChannels
+                    };
+
+                    const auto error = deviceManager.setAudioDeviceSetup(setup, true);
+                    if (error.isNotEmpty()) {
+                        DBG(error);
+                    }
+                    return {};
+                });
+
+            webViewManager.bind(
+                "juce_getAvailableSampleRates",
+                [&](const choc::value::ValueView &args) -> choc::value::Value {
+                    const auto &deviceManager = juce::StandalonePluginHolder::getInstance()->deviceManager;
+                    if (!deviceManager.getCurrentAudioDevice()) return choc::value::createEmptyArray();
+                    auto sampleRates = deviceManager.getCurrentAudioDevice()->getAvailableSampleRates();
+
+                    auto rates = choc::value::createEmptyArray();
+                    for (const auto &rate: sampleRates) {
+                        rates.addArrayElement(rate);
+                    }
+                    return rates;
+                });
+
+            webViewManager.bind(
+                "juce_getAvailableBufferSizes",
+                [&](const choc::value::ValueView &args) -> choc::value::Value {
+                    const auto &deviceManager = juce::StandalonePluginHolder::getInstance()->deviceManager;
+                    if (!deviceManager.getCurrentAudioDevice()) return choc::value::createEmptyArray();
+                    auto bufferSizes = deviceManager.getCurrentAudioDevice()->getAvailableBufferSizes();
+
+                    auto sizes = choc::value::createEmptyArray();
+                    for (const auto &size: bufferSizes) {
+                        sizes.addArrayElement(size);
+                    }
+                    return sizes;
+                });
+
+            webViewManager.bind(
+                "juce_getAvailableOutputDevices",
+                [&](const choc::value::ValueView &args) -> choc::value::Value {
+                    const auto &deviceManager = juce::StandalonePluginHolder::getInstance()->deviceManager;
+                    const auto deviceType = deviceManager.getCurrentDeviceTypeObject();
+
+                    auto outputs = choc::value::createEmptyArray();
+                    for (const auto &output: deviceType->getDeviceNames(false)) {
+                        outputs.addArrayElement(output.toStdString());
+                    }
+                    return outputs;
+                });
+
+            webViewManager.bind(
+                "juce_getAvailableInputDevices",
+                [&](const choc::value::ValueView &args) -> choc::value::Value {
+                    auto &deviceManager = juce::StandalonePluginHolder::getInstance()->deviceManager;
+                    auto deviceType = deviceManager.getCurrentDeviceTypeObject();
+
+                    auto inputs = choc::value::createEmptyArray();
+                    for (auto &input: deviceType->getDeviceNames(true)) {
+                        inputs.addArrayElement(input.toStdString());
+                    }
+                    return inputs;
+                });
+
+            webViewManager.bind(
+                "juce_getAvailableMidiInputDevices",
+                [&](const choc::value::ValueView &args) -> choc::value::Value {
+                    auto &deviceManager = juce::StandalonePluginHolder::getInstance()->deviceManager;
+                    auto midiInputs = juce::MidiInput::getAvailableDevices();
+
+                    auto inputs = choc::value::createEmptyArray();
+                    for (auto &input: midiInputs) {
+                        auto val = choc::value::createObject("MidiInput");
+                        val.addMember("name", input.name.toStdString());
+                        val.addMember("id", input.identifier.toStdString());
+                        val.addMember("enabled", deviceManager.isMidiInputDeviceEnabled(input.identifier));
+                        inputs.addArrayElement(val);
+                    }
+                    return inputs;
+                });
+
+            webViewManager.bind(
+                "juce_setMidiInputDevicesEnabled",
+                [&](const choc::value::ValueView &args) -> choc::value::Value {
+                    auto &deviceManager = juce::StandalonePluginHolder::getInstance()->deviceManager;
+                    auto devicesValue = args[0];
+                    for (auto d: devicesValue) {
+                        auto id = std::string(d["id"].getWithDefault(""));
+                        const auto enabled = d["enabled"].getWithDefault(false);
+
+                        deviceManager.setMidiInputDeviceEnabled(id, enabled);
+                    }
+                    return {};
+                });
+
+            webViewManager.bind(
+                "juce_getMillisecondTime",
+                [&](const choc::value::ValueView &args) -> choc::value::Value {
+                    return choc::value::Value((juce::int64) juce::Time::getMillisecondCounter());
+                });
+
+            webViewManager.bind(
+                "juce_getWrapperType",
+                [&](const choc::value::ValueView &args) -> choc::value::Value {
+                    std::string wrapperTypeString;
+
+                    if (processor.wrapperType == juce::AudioProcessor::wrapperType_AudioUnit)
+                        wrapperTypeString = "AU";
+                    else if (processor.wrapperType == juce::AudioProcessor::wrapperType_Standalone)
+                        wrapperTypeString = "Standalone";
+                    else if (processor.wrapperType == juce::AudioProcessor::wrapperType_VST3)
+                        wrapperTypeString = "VST3";
+                    else if (processor.wrapperType == juce::AudioProcessor::wrapperType_VST)
+                        wrapperTypeString = "VST2";
+
+                    return choc::value::Value(wrapperTypeString);
+                }
             );
 
             webViewManager.bind(
-                    "juce_saveInProcessor", [&](const choc::value::ValueView &args) -> choc::value::Value {
-                        auto key = std::string(args[0].getWithDefault(""));
-                        if (key.empty()) return {};
-                        auto value = std::string(args[1].getWithDefault(""));
-
-                        processor.getWebViewData().setMember(key, value);
-                        return {};
-                    });
+                "juce_getPluginName",
+                [&](const choc::value::ValueView &args) -> choc::value::Value {
+                    return choc::value::Value(PLUGIN_NAME);
+                }
+            );
 
             webViewManager.bind(
-                    "juce_loadFromProcessor", [&](const choc::value::ValueView &args) -> choc::value::Value {
-                        auto key = std::string(args[0].getWithDefault(""));
-                        if (key.empty()) return {};
+                "juce_saveInProcessor", [&](const choc::value::ValueView &args) -> choc::value::Value {
+                    auto key = std::string(args[0].getWithDefault(""));
+                    if (key.empty()) return {};
+                    auto value = std::string(args[1].getWithDefault(""));
 
-                        if (!processor.getWebViewData().hasObjectMember(key)) return {};
-                        return choc::value::Value(processor.getWebViewData()[key]);
-                    });
+                    processor.getWebViewData().setMember(key, value);
+                    return {};
+                });
 
             webViewManager.bind(
-                    "juce_setConfig",
-                    [&](const choc::value::ValueView &args) -> choc::value::Value {
-                        auto key = args[0].toString();
-                        auto value = args[1].toString();
-                        Resources::getConfigFile()->setValue(juce::String(key), juce::String(value));
-                        return {};
-                    }
+                "juce_loadFromProcessor", [&](const choc::value::ValueView &args) -> choc::value::Value {
+                    auto key = std::string(args[0].getWithDefault(""));
+                    if (key.empty()) return {};
+
+                    if (!processor.getWebViewData().hasObjectMember(key)) return {};
+                    return choc::value::Value(processor.getWebViewData()[key]);
+                });
+
+            webViewManager.bind(
+                "juce_setConfig",
+                [&](const choc::value::ValueView &args) -> choc::value::Value {
+                    auto key = args[0].toString();
+                    auto value = args[1].toString();
+                    Resources::getConfigFile()->setValue(juce::String(key), juce::String(value));
+                    return {};
+                }
             );
             webViewManager.bind(
-                    "juce_getConfig",
-                    [&](const choc::value::ValueView &args) -> choc::value::Value {
-                        auto key = juce::String(args[0].toString());
-                        auto configFile = Resources::getConfigFile();
-                        if (!configFile->containsKey(key)) return {};
+                "juce_getConfig",
+                [&](const choc::value::ValueView &args) -> choc::value::Value {
+                    auto key = juce::String(args[0].toString());
+                    auto configFile = Resources::getConfigFile();
+                    if (!configFile->containsKey(key)) return {};
 
-                        auto val = configFile->getValue(key);
-                        return choc::value::Value(val.toStdString());
-                    }
+                    auto val = configFile->getValue(key);
+                    return choc::value::Value(val.toStdString());
+                }
             );
             webViewManager.bind(
-                    "juce_getIsUpdateAvailable",
-                    [&](const choc::value::ValueView &args) -> choc::value::Value {
-                        auto newVersion = processor.getVersionManager().isUpdateAvailable();
-                        if (!newVersion) return {};
+                "juce_getIsUpdateAvailable",
+                [&](const choc::value::ValueView &args) -> choc::value::Value {
+                    auto newVersion = processor.getVersionManager().isUpdateAvailable();
+                    if (!newVersion) return {};
 
-                        return choc::value::Value(newVersion->toStdString());
-                    }
+                    return choc::value::Value(newVersion->toStdString());
+                }
             );
-            webViewManager.bind( "juce_revealUpdate",
-                                 [&](const choc::value::ValueView &args) -> choc::value::Value {
-                                     juce::URL(processor.getVersionManager().getUpdateURL()).launchInDefaultBrowser();
-                                     return {};
-                                 } );
+            webViewManager.bind("juce_revealUpdate",
+                                [&](const choc::value::ValueView &args) -> choc::value::Value {
+                                    juce::URL(processor.getVersionManager().getUpdateURL()).launchInDefaultBrowser();
+                                    return {};
+                                });
 
             webViewManager.bind("juce_getIsDebug",
-                                [&](const choc::value::ValueView& args) -> choc::value::Value {
+                                [&](const choc::value::ValueView &args) -> choc::value::Value {
 #if JUCE_DEBUG
                                     return choc::value::Value(true);
 #else
@@ -139,21 +301,25 @@ namespace imagiro {
                                 });
 
             webViewManager.bind("juce_getPlatform",
-                                [&](const choc::value::ValueView& args) -> choc::value::Value {
-                                    if ((juce::SystemStats::getOperatingSystemType() & juce::SystemStats::Windows) != 0) {
+                                [&](const choc::value::ValueView &args) -> choc::value::Value {
+                                    if ((juce::SystemStats::getOperatingSystemType() & juce::SystemStats::Windows) !=
+                                        0) {
                                         return choc::value::Value("windows");
-                                    } else if ((juce::SystemStats::getOperatingSystemType() & juce::SystemStats::MacOSX) != 0) {
+                                    } else if ((juce::SystemStats::getOperatingSystemType() & juce::SystemStats::MacOSX)
+                                               != 0) {
                                         return choc::value::Value("macOS");
                                     } else {
-                                        return choc::value::Value(juce::SystemStats::getOperatingSystemName().toStdString());
+                                        return choc::value::Value(
+                                            juce::SystemStats::getOperatingSystemName().toStdString());
                                     }
                                 });
 
             webViewManager.bind("juce_getDebugVersionString",
-                                [&](const choc::value::ValueView& args) -> choc::value::Value {
+                                [&](const choc::value::ValueView &args) -> choc::value::Value {
                                     juce::String statusString = " ";
 
-                                    if (juce::String(git_branch_str) != "master" && juce::String(git_branch_str) != "main") {
+                                    if (juce::String(git_branch_str) != "master" && juce::String(git_branch_str) !=
+                                        "main") {
                                         statusString += juce::String(git_branch_str);
                                     }
                                     statusString += "#" + juce::String(git_short_hash_str);
@@ -165,18 +331,18 @@ namespace imagiro {
             );
 
             webViewManager.bind(
-                    "juce_getCpuLoad",
-                    [&](const choc::value::ValueView &args) -> choc::value::Value {
-                        return choc::value::Value(processor.getCpuLoad());
-                    }
+                "juce_getCpuLoad",
+                [&](const choc::value::ValueView &args) -> choc::value::Value {
+                    return choc::value::Value(processor.getCpuLoad());
+                }
             );
             webViewManager.bind(
-                    "juce_Log",
-                    [&](const choc::value::ValueView &args) -> choc::value::Value {
-                        auto string = args[0].getWithDefault("");
-                        juce::Logger::outputDebugString(string);
-                        return {};
-                    });
+                "juce_Log",
+                [&](const choc::value::ValueView &args) -> choc::value::Value {
+                    auto string = args[0].getWithDefault("");
+                    juce::Logger::outputDebugString(string);
+                    return {};
+                });
         }
     };
 }
