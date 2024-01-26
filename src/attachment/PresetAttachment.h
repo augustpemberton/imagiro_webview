@@ -30,7 +30,7 @@ namespace imagiro {
                     "juce_getAvailablePresets",
                     [&](const choc::value::ValueView &args) -> choc::value::Value {
                         auto reloadCache = args[0].getWithDefault(false);
-                        if (reloadCache) resources->reloadPresetsMap();
+                        if (reloadCache) resources->reloadPresetsMap(&processor);
                         auto presets = resources->getPresets(false);
 
                         auto presetState = choc::value::createObject("Presets");
@@ -118,7 +118,7 @@ namespace imagiro {
                         auto relpath = args[0].toString();
                         auto presetFile = resources->getPresetsFolder().getChildFile(relpath);
                         if (!presetFile.exists()) return {};
-                        auto preset = FileBackedPreset::createFromFile(presetFile);
+                        auto preset = FileBackedPreset::createFromFile(presetFile, &processor);
                         if (!preset) return {};
                         processor.queuePreset(*preset);
                         return {};
