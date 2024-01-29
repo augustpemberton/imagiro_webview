@@ -125,13 +125,12 @@ void imagiro::ParameterAttachment::sendStateToBrowser(imagiro::Parameter *param)
     auto uid = param->getUID();
     auto value = param->getValue();
     juce::MessageManager::callAsync([&, uid, value]() {
-        auto *obj = new juce::DynamicObject();
-        obj->setProperty("uid", uid);
-        obj->setProperty("value01", value);
-
-        juce::var json(obj);
-        auto jsonString = juce::JSON::toString(json);
-        this->webViewManager.evaluateJavascript("window.ui.updateParameterState(" + jsonString.toStdString() + ")");
+        juce::String s = "window.ui.updateParameterState('";
+        s += "\""  + uid + "\"";
+        s += ", ";
+        s += juce::String(value);
+        s += ")";
+        this->webViewManager.evaluateJavascript(s.toStdString());
     });
 }
 
