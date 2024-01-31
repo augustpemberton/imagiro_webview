@@ -16,10 +16,34 @@ namespace imagiro {
                 : WebUIAttachment(processor, manager)
         {
             watcher.addWatch(resources->getPresetsFolder().getFullPathName().toStdString(), this, true);
+
+            loadDefaultPreset();
         }
 
         ~PresetAttachment() override {
             processor.removePresetListener(this);
+        }
+
+        void loadDefaultPreset() {
+            auto defaultPresetPath = resources->getConfigFile()->getValue("defaultPresetPath", "");
+            if (!defaultPresetPath.isEmpty()) {
+                auto defaultPresetFile = juce::File(defaultPresetPath);
+                if (defaultPresetFile.exists()) {
+                    auto preset = FileBackedPreset::createFromFile(defaultPresetPath);
+                    if (preset) {
+                        processor.queuePreset(preset.value(), true);
+                        return;
+                    }
+                }
+            }
+
+            auto defaultPresetString = resources->getConfigFile()->getValue("defaultPresetState", "");
+            if (!defaultPresetString.isEmpty()) {
+                auto presetValue = choc::json::parse(defaultPresetString.toStdString());
+                auto preset = Preset::fromState(presetValue);
+                DBG("loading default preset: " << preset.getName());
+                processor.queuePreset(preset, true);
+            }
         }
 
         void handleFileAction(efsw::WatchID watchid, const std::string &dir, const std::string &filename,
@@ -205,6 +229,54 @@ namespace imagiro {
                         return choc::value::Value(false);
                     }
             );
+
+            webViewManager.bind(
+                    "juce_setDefaultPreset",
+                    [&](const choc::value::ValueView &args) -> choc::value::Value {
+                        auto relpath = args[0].toString();
+                        auto presetFile = resources->getPresetsFolder().getChildFile(relpath);
+                        if (!presetFile.exists()) return {};
+
+                        auto preset = FileBackedPreset::createFromFile(presetFile, &processor);
+                        if (!preset) return {};
+
+                        auto presetString = choc::json::toString(preset.value().getState());
+                        resources->getConfigFile()->setValue("defaultPresetPath", presetFile.getFullPathName());
+                        resources->getConfigFile()->setValue("defaultPresetState", juce::String(presetString));
+                        resources->getConfigFile()->save();
+
+                        return {};
+                    });
+
+            webViewManager.bind(
+                    "juce_clearDefaultPreset",
+                    [&](const choc::value::ValueView &args) -> choc::value::Value {
+                        resources->getConfigFile()->removeValue("defaultPresetPath");
+                        resources->getConfigFile()->removeValue("defaultPresetState");
+                        resources->getConfigFile()->save();
+                        return {};
+                    });
+
+            webViewManager.bind(
+                    "juce_getDefaultPreset",
+                    [&](const choc::value::ValueView &args) -> choc::value::Value {
+                        auto path = resources->getConfigFile()->getValue("defaultPresetPath", "").toStdString();
+                        auto file = juce::File(path);
+                        if (!file.exists()) return choc::value::Value {""};
+
+                        auto relpath = file.getRelativePathFrom(Resources::getPresetsFolder()).toStdString();
+                        return choc::value::Value {relpath};
+                    });
+
+
+            webViewManager.bind("juce_revealPreset",
+                    [&](const choc::value::ValueView& args) -> choc::value::Value {
+                        auto relpath = args[0].toString();
+                        auto presetFile = resources->getPresetsFolder().getChildFile(relpath);
+                        if (!presetFile.exists()) return {};
+                        presetFile.revealToUser();
+                        return {};
+                    });
         }
 
         void OnPresetChange(Preset &preset) override {
