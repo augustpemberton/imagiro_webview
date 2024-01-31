@@ -5,13 +5,27 @@
 #pragma once
 #include "WebUIAttachment.h"
 #include <imagiro_processor/imagiro_processor.h>
+#include <efsw/efsw.hpp>
 
 namespace imagiro {
-    class PresetAttachment : public WebUIAttachment, public Processor::PresetListener {
+    class PresetAttachment : public WebUIAttachment, public Processor::PresetListener, public efsw::FileWatchListener {
     public:
         using WebUIAttachment::WebUIAttachment;
+
+        PresetAttachment(WebProcessor& processor, WebViewManager& manager)
+                : WebUIAttachment(processor, manager)
+        {
+            watcher.addWatch(resources->getPresetsFolder().getFullPathName().toStdString(), this, true);
+        }
+
         ~PresetAttachment() override {
             processor.removePresetListener(this);
+        }
+
+        void handleFileAction(efsw::WatchID watchid, const std::string &dir, const std::string &filename,
+                              efsw::Action action, std::string oldFilename = "") override {
+            resources->reloadPresets();
+            webViewManager.evaluateJavascript("window.ui.reloadPresets()");
         }
 
         void addListeners() override {
@@ -199,5 +213,6 @@ namespace imagiro {
 
     private:
         juce::SharedResourcePointer<Resources> resources;
+        efsw::FileWatcher watcher;
     };
 }

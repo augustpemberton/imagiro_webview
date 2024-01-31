@@ -14,20 +14,36 @@
 #include "juce_audio_plugin_client/Standalone/juce_StandaloneFilterWindow.h"
 
 namespace imagiro {
-    class PluginInfoAttachment : public WebUIAttachment, public VersionManager::Listener {
+    class PluginInfoAttachment : public WebUIAttachment, public VersionManager::Listener, juce::ChangeListener {
     public:
         using WebUIAttachment::WebUIAttachment;
 
         void addListeners() override {
             processor.getVersionManager().addListener(this);
+
+            juce::MessageManager::callAsync([&]() {
+                auto standaloneInstance = juce::StandalonePluginHolder::getInstance();
+                if (standaloneInstance) {
+                    standaloneInstance->deviceManager.addChangeListener(this);
+                }
+            });
         }
 
         ~PluginInfoAttachment() override {
             processor.getVersionManager().removeListener(this);
+
+            auto standaloneInstance = juce::StandalonePluginHolder::getInstance();
+            if (standaloneInstance) {
+                standaloneInstance->deviceManager.removeChangeListener(this);
+            }
         }
 
         void OnUpdateDiscovered() override {
             webViewManager.evaluateJavascript("window.ui.updateDiscovered()");
+        }
+
+        void changeListenerCallback(juce::ChangeBroadcaster *source) override {
+            webViewManager.evaluateJavascript("window.ui.onDevicesChanged()");
         }
 
         void addBindings() override {
@@ -260,8 +276,20 @@ namespace imagiro {
                 "juce_setConfig",
                 [&](const choc::value::ValueView &args) -> choc::value::Value {
                     auto key = args[0].toString();
-                    auto value = args[1].toString();
-                    Resources::getConfigFile()->setValue(juce::String(key), juce::String(value));
+
+                    if (args[1].isFloat32()) {
+                        Resources::getConfigFile()->setValue(juce::String(key), args[1].getFloat32());
+                    } else if (args[1].isFloat64()) {
+                        Resources::getConfigFile()->setValue(juce::String(key), args[1].getFloat64());
+                    } else if (args[1].isInt()) {
+                        Resources::getConfigFile()->setValue(juce::String(key), args[1].getWithDefault(0));
+                    } else if (args[1].isBool()) {
+                        Resources::getConfigFile()->setValue(juce::String(key), args[1].getBool());
+                    } else if (args[1].isString()) {
+                        Resources::getConfigFile()->setValue(juce::String(key), juce::String(args[1].toString()));
+                    } else {
+                        Resources::getConfigFile()->setValue(juce::String(key), juce::String(choc::json::toString(args[1])));
+                    }
                     return {};
                 }
             );
@@ -273,6 +301,7 @@ namespace imagiro {
                     if (!configFile->containsKey(key)) return {};
 
                     auto val = configFile->getValue(key);
+
                     return choc::value::Value(val.toStdString());
                 }
             );

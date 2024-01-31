@@ -125,7 +125,7 @@ void imagiro::ParameterAttachment::sendStateToBrowser(imagiro::Parameter *param)
     auto uid = param->getUID();
     auto value = param->getValue();
     juce::MessageManager::callAsync([&, uid, value]() {
-        juce::String s = "window.ui.updateParameterState('";
+        juce::String s = "window.ui.updateParameterState(";
         s += "\""  + uid + "\"";
         s += ", ";
         s += juce::String(value);
