@@ -81,7 +81,9 @@ namespace imagiro {
 
         void evaluateJavascript(std::string js) {
             juce::MessageManager::callAsync([&, js]() {
-                for (auto wv: activeWebViews) wv->evaluateJavascript(js);
+                auto jsString = choc::json::toString(choc::value::Value(js));
+                auto evalString = "window.ui.evaluate(" + jsString + ");";
+                for (auto wv: activeWebViews) wv->evaluateJavascript(evalString);
             });
         }
 

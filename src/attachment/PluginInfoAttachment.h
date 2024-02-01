@@ -372,6 +372,14 @@ namespace imagiro {
                     juce::Logger::outputDebugString(string);
                     return {};
                 });
+            webViewManager.bind(
+                    "juce_getUUID",
+                    [&](const choc::value::ValueView &args) -> choc::value::Value {
+                        return choc::value::Value(uuid.toString().toStdString());
+                    });
         }
+
+    private:
+        juce::Uuid uuid;
     };
 }
