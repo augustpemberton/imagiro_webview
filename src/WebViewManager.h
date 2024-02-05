@@ -6,11 +6,12 @@
 #include <juce_core/juce_core.h>
 #include <juce_audio_processors/juce_audio_processors.h>
 #include "ChocServer.h"
+#include "farbot/fifo.hpp"
 
 #pragma once
 
 namespace imagiro {
-    class WebViewManager {
+    class WebViewManager : juce::Timer {
     public:
         struct Listener {
             virtual void fileOpenerRequested(juce::String patternsAllowed) {}
@@ -30,6 +31,8 @@ namespace imagiro {
                             }
             );
             setupWebview(preparedWebview.get());
+
+            startTimerHz(60);
         }
 
         std::shared_ptr<choc::ui::WebView> getWebView(juce::AudioProcessorEditor* editor) {
@@ -79,12 +82,16 @@ namespace imagiro {
             currentURL = "";
         }
 
-        void evaluateJavascript(std::string js) {
-            juce::MessageManager::callAsync([&, js]() {
-                auto jsString = choc::json::toString(choc::value::Value(js));
-                auto evalString = "window.ui.evaluate(" + jsString + ");";
+        void evaluateJavascript(const std::string& js) {
+            jsEvalFifo.push(choc::json::toString(choc::value::Value(js)));
+        }
+
+        void timerCallback() override {
+            std::string temp;
+            while (jsEvalFifo.pop(temp)) {
+                auto evalString = "window.ui.evaluate(" + temp + ");";
                 for (auto wv: activeWebViews) wv->evaluateJavascript(evalString);
-            });
+            }
         }
 
         void bind(const std::string &functionName, choc::ui::WebView::CallbackFn &&func) {
@@ -125,5 +132,11 @@ namespace imagiro {
         std::optional<std::string> currentURL;
 
         ChocServer server;
+
+        farbot::fifo<std::string,
+                farbot::fifo_options::concurrency::single,
+                farbot::fifo_options::concurrency::single,
+                farbot::fifo_options::full_empty_failure_mode::return_false_on_full_or_empty,
+                farbot::fifo_options::full_empty_failure_mode::overwrite_or_return_default> jsEvalFifo {2048};
     };
 }

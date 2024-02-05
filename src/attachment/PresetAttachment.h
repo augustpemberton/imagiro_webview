@@ -208,6 +208,8 @@ namespace imagiro {
             webViewManager.bind(
                     "juce_hasPresetBeenUpdated",
                     [&](const choc::value::ValueView &args) -> choc::value::Value {
+                        return choc::value::Value(false); // perfomance
+
                         if (!processor.lastLoadedPreset) return choc::value::Value(false);
                         auto lastLoaded = processor.lastLoadedPreset->getPreset();
                         auto current = processor.createPreset(lastLoaded.getName(),
@@ -267,7 +269,7 @@ namespace imagiro {
                         auto file = juce::File(path);
                         if (!file.exists()) return choc::value::Value {""};
 
-                        auto relpath = file.getRelativePathFrom(Resources::getPresetsFolder()).toStdString();
+                        auto relpath = file.getRelativePathFrom(Resources::getInstance()->getPresetsFolder()).toStdString();
                         return choc::value::Value {relpath};
                     });
 

@@ -5,11 +5,12 @@
 #pragma once
 #include "WebUIAttachment.h"
 #include <imagiro_processor/imagiro_processor.h>
+#include <farbot/fifo.hpp>
 
 namespace imagiro {
     class ParameterAttachment : public WebUIAttachment, public Parameter::Listener {
     public:
-        using WebUIAttachment::WebUIAttachment;
+        ParameterAttachment(WebProcessor& p, WebViewManager& w);
         ~ParameterAttachment() override;
 
         void addListeners() override;

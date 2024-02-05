@@ -5,6 +5,10 @@
 #include "ParameterAttachment.h"
 #include <imagiro_processor/imagiro_processor.h>
 
+imagiro::ParameterAttachment::ParameterAttachment(imagiro::WebProcessor &p, imagiro::WebViewManager &w)
+        : WebUIAttachment(p, w) {
+}
+
 void imagiro::ParameterAttachment::addListeners() {
     for (auto param: processor.getPluginParameters()) {
         param->addListener(this);
@@ -124,14 +128,14 @@ void imagiro::ParameterAttachment::parameterChangedSync(imagiro::Parameter *para
 void imagiro::ParameterAttachment::sendStateToBrowser(imagiro::Parameter *param) {
     auto uid = param->getUID();
     auto value = param->getValue();
-    juce::MessageManager::callAsync([&, uid, value]() {
-        juce::String s = "window.ui.updateParameterState(";
-        s += "\""  + uid + "\"";
-        s += ", ";
-        s += juce::String(value);
-        s += ")";
-        this->webViewManager.evaluateJavascript(s.toStdString());
-    });
+
+    juce::String s = "window.ui.updateParameterState(";
+    s += "\""  + uid + "\"";
+    s += ", ";
+    s += juce::String(value);
+    s += ")";
+
+    this->webViewManager.evaluateJavascript(s.toStdString());
 }
 
 choc::value::Value imagiro::ParameterAttachment::getAllParameterSpecValue() {
@@ -164,3 +168,4 @@ choc::value::Value imagiro::ParameterAttachment::getParameterSpecValue(imagiro::
     paramSpec.setMember("range", range);
     return paramSpec;
 }
+
