@@ -49,6 +49,11 @@ namespace imagiro {
                                      return choc::value::createBool(success);
                                  }
             );
+
+            webViewManager.bind( "juce_getSerial",
+                                 [&](const choc::value::ValueView &args) -> choc::value::Value {
+                return choc::value::Value {processor.getAuthManager().getSerial().toStdString()};
+            });
         }
     };
 }
