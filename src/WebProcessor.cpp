@@ -67,5 +67,18 @@ namespace imagiro {
         uiAttachments.back()->addBindings();
     }
 
+    Preset WebProcessor::createPreset(const juce::String &name, bool isDAWSaveState) {
+        auto p = Processor::createPreset(name, isDAWSaveState);
+        if (isDAWSaveState) {
+            p.getData().addMember("webviewData", getWebViewData());
+        }
+        return p;
+    }
 
+    void WebProcessor::loadPreset(Preset preset) {
+        Processor::loadPreset(preset);
+        if (preset.isDAWSaveState() && preset.getData().hasObjectMember("webviewData")) {
+            webViewCustomData = preset.getData()["webviewData"];
+        }
+    }
 }

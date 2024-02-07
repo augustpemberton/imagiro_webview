@@ -34,6 +34,9 @@ public:
 
     choc::value::Value& getWebViewData() { return webViewCustomData; }
 
+    Preset createPreset(const juce::String &name, bool isDAWSaveState) override;
+    void loadPreset(Preset preset) override;
+
 protected:
     WebViewManager webView;
     std::vector<std::unique_ptr<WebUIAttachment>> uiAttachments;
