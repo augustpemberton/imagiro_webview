@@ -3,7 +3,6 @@
 //
 
 #pragma once
-#include <version.h>
 #include <timestamp.h>
 #include <imagiro_processor/imagiro_processor.h>
 #include "WebUIAttachment.h"
