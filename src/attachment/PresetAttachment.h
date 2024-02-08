@@ -52,7 +52,7 @@ class PresetAttachment : public WebUIAttachment, public Processor::PresetListene
 
         void folderChanged(const juce::File) override {
             std::lock_guard g (fileActionMutex);
-            resources->reloadPresets();
+            resources->reloadPresets(&processor);
             webViewManager.evaluateJavascript("window.ui.reloadPresets()");
         }
 
