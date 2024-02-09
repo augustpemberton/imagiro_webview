@@ -65,7 +65,7 @@ class PresetAttachment : public WebUIAttachment, public Processor::PresetListene
                     "juce_getActivePreset",
                     [&](const choc::value::ValueView &args) -> choc::value::Value {
                         if (!processor.lastLoadedPreset) return {};
-                        return processor.lastLoadedPreset->getState();
+                        return processor.lastLoadedPreset->getUIState();
                     }
             );
             webViewManager.bind(
@@ -79,7 +79,7 @@ class PresetAttachment : public WebUIAttachment, public Processor::PresetListene
                         for (const auto& category : presets) {
                             auto categoryState = choc::value::createEmptyArray();
                             for (auto& fbp : category.second) {
-                                categoryState.addArrayElement(fbp.getState());
+                                categoryState.addArrayElement(fbp.getUIState());
                             }
                             presetState.addMember(category.first.toStdString(), categoryState);
                         }
@@ -102,7 +102,7 @@ class PresetAttachment : public WebUIAttachment, public Processor::PresetListene
             webViewManager.bind(
                     "juce_getCurrentSettingsAsPreset",
                     [&](const choc::value::ValueView &args) -> choc::value::Value {
-                        auto time = juce::Time();
+                        auto time = juce::Time::getCurrentTime();
                         auto preset = processor.createPreset(
                                 juce::String(time.getDayOfMonth()) +
                                 juce::String("-") +
@@ -112,12 +112,11 @@ class PresetAttachment : public WebUIAttachment, public Processor::PresetListene
                                 true
                         );
 
-                        return preset.getState();
+                        return preset.getUIState();
                     }
             );
-
             webViewManager.bind(
-                    "juce_setPresetFromString",
+                    "juce_loadPresetFromString",
                     [&](const choc::value::ValueView &args) -> choc::value::Value {
                         auto preset = Preset::fromState(args[0]);
                         processor.queuePreset(preset);
@@ -246,7 +245,7 @@ class PresetAttachment : public WebUIAttachment, public Processor::PresetListene
                         auto preset = FileBackedPreset::createFromFile(presetFile, &processor);
                         if (!preset) return {};
 
-                        auto presetString = choc::json::toString(preset.value().getState());
+                        auto presetString = choc::json::toString(preset.value().getUIState());
                         resources->getConfigFile()->setValue("defaultPresetPath", presetFile.getFullPathName());
                         resources->getConfigFile()->setValue("defaultPresetState", juce::String(presetString));
                         resources->getConfigFile()->save();
@@ -282,6 +281,42 @@ class PresetAttachment : public WebUIAttachment, public Processor::PresetListene
                         if (!presetFile.exists()) return {};
                         presetFile.revealToUser();
                         return {};
+                    });
+
+            webViewManager.bind(
+                    "juce_compressedB64",
+                    [&](const choc::value::ValueView &args) -> choc::value::Value {
+                        auto string = std::string(args[0].getWithDefault(""));
+
+                        int level = Z_BEST_COMPRESSION;
+                        auto compressedPresetString = gzip::compress(string.data(),
+                                                                     string.size(),
+                                                                     level);
+
+                        juce::MemoryOutputStream encodedStream;
+                        juce::Base64::convertToBase64(encodedStream, compressedPresetString.data(),
+                                                      compressedPresetString.size());
+                        return choc::value::Value {encodedStream.toString().toStdString()};
+                    });
+
+            webViewManager.bind(
+                    "juce_decompressB64",
+                    [&](const choc::value::ValueView &args) -> choc::value::Value {
+                        auto encodedString = args[0].getWithDefault("");
+
+                        juce::MemoryOutputStream decodedStream;
+                        if (!juce::Base64::convertFromBase64(decodedStream, encodedString)) {
+                            return {};
+                        }
+
+                        try {
+                            auto decodedString = gzip::decompress(static_cast<const char*>(decodedStream.getData()),
+                                                                     decodedStream.getDataSize());
+                            return choc::value::Value (decodedString);
+                        } catch (std::runtime_error& e) {
+                            DBG(e.what());
+                            return {};
+                        }
                     });
         }
 
