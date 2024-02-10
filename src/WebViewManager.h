@@ -21,15 +21,7 @@ namespace imagiro {
         void removeListener(Listener* l) {listeners.remove(l);}
 
         WebViewManager() {
-            preparedWebview = std::make_unique<choc::ui::WebView>(
-                    choc::ui::WebView::Options
-                            {
-                                    true, true, "",
-                                    [&](auto& path) {
-                                        return server.getResource(path);
-                                    }
-                            }
-            );
+            preparedWebview = createWebView();
             setupWebview(*preparedWebview);
 
             startTimerHz(60);
