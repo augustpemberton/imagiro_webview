@@ -32,7 +32,7 @@ public:
         int resourceSize = 0;
         auto resource = BinaryData::getNamedResource(resourceName.c_str(), resourceSize);
         if (!resource) {
-            jassertfalse;
+            jassert(resourceName == "favicon_ico"); // probably an error if theres something that isnt the favicon we cant find
             return {};
         }
 

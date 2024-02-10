@@ -30,25 +30,37 @@ namespace imagiro {
                                     }
                             }
             );
-            setupWebview(preparedWebview.get());
+            setupWebview(*preparedWebview);
 
             startTimerHz(60);
         }
 
         std::shared_ptr<choc::ui::WebView> getWebView(juce::AudioProcessorEditor* editor) {
-            auto s = std::move(preparedWebview);
+            // move prepared to active
+            auto activeView = std::move(preparedWebview);
+            bindEditorSpecificFunctions(*activeView, editor);
 
-            preparedWebview = std::make_unique<choc::ui::WebView>(
+            // recreate prepared webview for next open
+            preparedWebview = createWebView();
+            setupWebview(*preparedWebview);
+
+            return activeView;
+        }
+
+        std::shared_ptr<choc::ui::WebView> createWebView() {
+            return std::make_shared<choc::ui::WebView>(
                     choc::ui::WebView::Options
-                    {
-                            true, true, "",
-                            [&](auto& path) {
-                                return server.getResource(path);
+                            {
+                                    true, true, "",
+                                    [&](auto& path) {
+                                        return server.getResource(path);
+                                    }
                             }
-                    }
             );
+        }
 
-            s->bind( "juce_setWindowSize",
+        static void bindEditorSpecificFunctions(choc::ui::WebView& view, juce::AudioProcessorEditor* editor) {
+            view.bind( "juce_setWindowSize",
                       [editor](const choc::value::ValueView &args) -> choc::value::Value {
                           auto x = args[0].getWithDefault(500);
                           auto y = args[1].getWithDefault(400);
@@ -56,10 +68,6 @@ namespace imagiro {
                           return {};
                       }
             );
-
-            setupWebview(preparedWebview.get());
-
-            return s;
         }
 
         void navigate(const std::string &url) {
@@ -94,9 +102,13 @@ namespace imagiro {
             }
         }
 
-        void bind(const std::string &functionName, choc::ui::WebView::CallbackFn &&func) {
-            for (auto wv : activeWebViews) wv->bind(functionName, std::move(func));
-            fnsToBind.emplace_back(functionName, func);
+        void bind(const std::string &functionName, choc::ui::WebView::CallbackFn &&fn) {
+            choc::ui::WebView::CallbackFn func = fn;
+            for (auto wv : activeWebViews) {
+                auto funcCopy = func;
+                wv->bind(functionName, std::move(funcCopy));
+            }
+            fnsToBind.emplace_back(functionName, std::move(func));
         }
 
         void requestFileChooser(juce::String patternsAllowed = "*.wav") {
@@ -109,16 +121,16 @@ namespace imagiro {
 
         bool isShowing() { return !activeWebViews.isEmpty();}
 
-        void setupWebview(choc::ui::WebView* wv) {
-            activeWebViews.add(wv);
+        void setupWebview(choc::ui::WebView& wv) {
+            activeWebViews.add(&wv);
 
             for (auto& func : fnsToBind) {
                 auto funcCopy = func.second;
-                wv->bind(func.first, std::move(funcCopy));
+                wv.bind(func.first, std::move(funcCopy));
             }
 
-            if (htmlToSet) wv->setHTML(htmlToSet.value());
-            if (currentURL) wv->navigate(currentURL.value());
+            if (htmlToSet) wv.setHTML(htmlToSet.value());
+            if (currentURL) wv.navigate(currentURL.value());
         }
 
     private:
