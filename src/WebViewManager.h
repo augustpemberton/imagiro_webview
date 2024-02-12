@@ -6,7 +6,7 @@
 #include <juce_core/juce_core.h>
 #include <juce_audio_processors/juce_audio_processors.h>
 #include "ChocServer.h"
-#include "farbot/fifo.hpp"
+#include <imagiro_util/imagiro_util.h>
 
 #pragma once
 
@@ -83,13 +83,13 @@ namespace imagiro {
         }
 
         void evaluateJavascript(const std::string& js) {
-            jsEvalFifo.push(choc::json::toString(choc::value::Value(js)));
+            jsEvalQueue.enqueue(choc::json::toString(choc::value::Value(js)));
         }
 
         void timerCallback() override {
-            std::string temp;
-            while (jsEvalFifo.pop(temp)) {
-                auto evalString = "window.ui.evaluate(" + temp + ");";
+            std::string js;
+            while (jsEvalQueue.try_dequeue(js)) {
+                auto evalString = "window.ui.evaluate(" + js + ");";
                 for (auto wv: activeWebViews) wv->evaluateJavascript(evalString);
             }
         }
@@ -137,10 +137,6 @@ namespace imagiro {
 
         ChocServer server;
 
-        farbot::fifo<std::string,
-                farbot::fifo_options::concurrency::single,
-                farbot::fifo_options::concurrency::single,
-                farbot::fifo_options::full_empty_failure_mode::return_false_on_full_or_empty,
-                farbot::fifo_options::full_empty_failure_mode::overwrite_or_return_default> jsEvalFifo {2048};
+        moodycamel::ReaderWriterQueue<std::string> jsEvalQueue {2048};
     };
 }
