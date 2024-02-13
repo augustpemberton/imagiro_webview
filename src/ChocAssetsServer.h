@@ -4,13 +4,18 @@
 
 #pragma once
 #include <choc/gui/choc_WebView.h>
-
 #include <utility>
-#include "BinaryData.h"
 
 using choc::ui::WebView;
-class ChocServer {
+using GetResource = std::function<const char*(const char*, int&)>;
+using GetResourceOriginalFilename = std::function<const char*(const char*)>;
+
+namespace imagiro {
+class ChocAssetsServer {
 public:
+    explicit ChocAssetsServer(GetResource getNamedResourceLambda, GetResourceOriginalFilename getNamedResourceOriginalFilenameLambda)
+    : getNamedResource(getNamedResourceLambda), getNamedResourceOriginalFilename(getNamedResourceOriginalFilenameLambda) {}
+
     std::optional<WebView::Options::Resource> getResource(const std::string& p) {
         if (p.starts_with("http")) {
             return getWebResource(juce::URL(p));
@@ -30,13 +35,13 @@ public:
         if (isdigit(resourceName[0])) resourceName = "_" + resourceName;
 
         int resourceSize = 0;
-        auto resource = BinaryData::getNamedResource(resourceName.c_str(), resourceSize);
+        auto resource = getNamedResource(resourceName.c_str(), resourceSize);
         if (!resource) {
             jassert(resourceName == "favicon_ico"); // probably an error if theres something that isnt the favicon we cant find
             return {};
         }
 
-        auto filePath = std::string(BinaryData::getNamedResourceOriginalFilename(
+        auto filePath = std::string(getNamedResourceOriginalFilename(
                 resourceName.c_str()));
 
         auto fileExtension = filePath.substr(filePath.find_last_of(".") + 1);
@@ -94,4 +99,10 @@ public:
 
         return {d, mimeType};
     }
+
+    private:
+
+        GetResource getNamedResource;
+        GetResourceOriginalFilename getNamedResourceOriginalFilename;
 };
+} // namespace imagiro

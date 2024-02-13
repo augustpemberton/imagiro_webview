@@ -5,9 +5,8 @@
 #pragma once
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <imagiro_processor/imagiro_processor.h>
-
 #include "WebViewManager.h"
-
+#include "imagiro_webview/src/ChocAssetsServer.h"
 #include <memory>
 
 namespace imagiro {
@@ -20,7 +19,7 @@ public:
     WebProcessor(const juce::AudioProcessor::BusesProperties& ioLayouts,
               juce::String currentVersion = "1.0.0", juce::String productSlug = "");
 
-    WebViewManager& getWebViewManager() { return webView; }
+    WebViewManager& getWebViewManager() { return webViewManager; }
     juce::AudioProcessorEditor* createEditor() override;
 
     virtual juce::Point<int> getDefaultWindowSize() { return {400, 300}; }
@@ -37,8 +36,19 @@ public:
     Preset createPreset(const juce::String &name, bool isDAWSaveState) override;
     void loadPreset(Preset preset) override;
 
+    // Override these in your subclass to provide the binary resources that the web view will serve
+    virtual const char* getNamedResource (const char* resourceNameUTF8, int& dataSizeInBytes) = 0;
+    virtual const char* getNamedResourceOriginalFilename (const char* resourceNameUTF8) = 0;
 protected:
-    WebViewManager webView;
+    ChocAssetsServer server {
+        [this](const char *resourceNameUTF8, int &dataSizeInBytes) {
+            return this->getNamedResource(resourceNameUTF8, dataSizeInBytes);
+        },
+        [this](const char *resourceNameUTF8) {
+            return this->getNamedResourceOriginalFilename(resourceNameUTF8);
+        }
+    };
+    WebViewManager webViewManager { server };
     std::vector<std::unique_ptr<WebUIAttachment>> uiAttachments;
 
     choc::value::Value webViewCustomData {choc::value::createObject("CustomData")};

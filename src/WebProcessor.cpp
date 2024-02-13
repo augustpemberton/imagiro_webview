@@ -49,11 +49,11 @@ namespace imagiro {
     }
 
     void WebProcessor::init() {
-        addUIAttachment(std::make_unique<ParameterAttachment>(*this, webView));
-        addUIAttachment(std::make_unique<PresetAttachment>(*this, webView));
-        addUIAttachment(std::make_unique<PluginInfoAttachment>(*this, webView));
-        addUIAttachment(std::make_unique<AuthAttachment>(*this, webView));
-        addUIAttachment(std::make_unique<FileIOAttachment>(*this, webView));
+        addUIAttachment(std::make_unique<ParameterAttachment>(*this, webViewManager));
+        addUIAttachment(std::make_unique<PresetAttachment>(*this, webViewManager));
+        addUIAttachment(std::make_unique<PluginInfoAttachment>(*this, webViewManager));
+        addUIAttachment(std::make_unique<AuthAttachment>(*this, webViewManager));
+        addUIAttachment(std::make_unique<FileIOAttachment>(*this, webViewManager));
     }
 
     void WebProcessor::addUIAttachment(WebUIAttachment& attachment) {

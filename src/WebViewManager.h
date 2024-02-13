@@ -5,7 +5,7 @@
 #include <choc/gui/choc_WebView.h>
 #include <juce_core/juce_core.h>
 #include <juce_audio_processors/juce_audio_processors.h>
-#include "ChocServer.h"
+#include "ChocAssetsServer.h"
 #include <imagiro_util/imagiro_util.h>
 
 #pragma once
@@ -20,7 +20,8 @@ namespace imagiro {
         void addListener(Listener* l) {listeners.add(l);}
         void removeListener(Listener* l) {listeners.remove(l);}
 
-        WebViewManager() {
+        WebViewManager(ChocAssetsServer& server) : server(server) {
+
             preparedWebview = createWebView();
             setupWebview(*preparedWebview);
 
@@ -135,7 +136,7 @@ namespace imagiro {
         std::optional<std::string> htmlToSet;
         std::optional<std::string> currentURL;
 
-        ChocServer server;
+        ChocAssetsServer& server;
 
         moodycamel::ReaderWriterQueue<std::string> jsEvalQueue {2048};
     };

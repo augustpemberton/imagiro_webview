@@ -168,4 +168,3 @@ choc::value::Value imagiro::ParameterAttachment::getParameterSpecValue(imagiro::
     paramSpec.setMember("range", range);
     return paramSpec;
 }
-
