@@ -24,7 +24,5 @@ namespace imagiro {
         choc::value::Value getAllParameterSpecValue();
 
         static choc::value::Value getParameterSpecValue(Parameter* param);
-
-        Parameter* ignoreCallbackParam {nullptr};
     };
 } // namespace imagiro
