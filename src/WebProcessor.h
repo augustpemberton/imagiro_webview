@@ -15,9 +15,9 @@ class WebUIAttachment;
 
 class WebProcessor : public Processor {
 public:
-    WebProcessor(juce::String currentVersion = "1.0.0", juce::String productSlug = "");
+    WebProcessor(std::function<juce::String()> getParametersYAMLString, juce::String currentVersion = "1.0.0", juce::String productSlug = "");
     WebProcessor(const juce::AudioProcessor::BusesProperties& ioLayouts,
-              juce::String currentVersion = "1.0.0", juce::String productSlug = "");
+              std::function<juce::String()> getParametersYAMLString, juce::String currentVersion = "1.0.0", juce::String productSlug = "");
 
     WebViewManager& getWebViewManager() { return webViewManager; }
     juce::AudioProcessorEditor* createEditor() override;
