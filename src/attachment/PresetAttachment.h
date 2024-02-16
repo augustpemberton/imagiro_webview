@@ -93,8 +93,9 @@ class PresetAttachment : public WebUIAttachment, public Processor::PresetListene
                         auto name = args[0].toString();
                         auto category = args[1].toString();
                         auto preset = processor.createPreset(name, false);
-                        FileBackedPreset::save(preset, category);
+                        auto fbp = FileBackedPreset::save(preset, category);
                         webViewManager.evaluateJavascript("window.ui.reloadPresets()");
+                        processor.queuePreset(fbp, true);
                         return {};
                     }
             );
