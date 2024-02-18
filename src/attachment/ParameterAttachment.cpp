@@ -159,6 +159,13 @@ choc::value::Value imagiro::ParameterAttachment::getParameterSpecValue(imagiro::
     paramSpec.setMember("defaultVal01", param->getDefaultValue());
     paramSpec.setMember("locked", param->isLocked());
 
+    // Convert std::vector<std::string> to choc::value::Value
+    auto choicesArray = choc::value::createEmptyArray();
+    for (const auto& choice : param->getConfig()->choices) {
+        choicesArray.addArrayElement(choc::value::Value(choice));
+    }
+    paramSpec.setMember("choices", choicesArray);
+
     auto range = choc::value::createObject("range");
     range.setMember("min", param->getUserRange().start);
     range.setMember("max", param->getUserRange().end);
