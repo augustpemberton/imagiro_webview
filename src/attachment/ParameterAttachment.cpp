@@ -31,6 +31,7 @@ void imagiro::ParameterAttachment::addBindings() {
                 auto param = processor.getParameter(paramID);
                 if (param) {
                     param->setValueAndNotifyHost(newValue01);
+
                 }
 
                 return choc::value::Value(param->getValue());
@@ -119,8 +120,7 @@ void imagiro::ParameterAttachment::addBindings() {
 }
 
 void imagiro::ParameterAttachment::parameterChangedSync(imagiro::Parameter *param) {
-    if (ignoreCallbackParam != param)
-        sendStateToBrowser(param);
+    sendStateToBrowser(param);
 }
 
 void imagiro::ParameterAttachment::sendStateToBrowser(imagiro::Parameter *param) {
@@ -156,6 +156,13 @@ choc::value::Value imagiro::ParameterAttachment::getParameterSpecValue(imagiro::
     paramSpec.setMember("value01", param->getValue());
     paramSpec.setMember("defaultVal01", param->getDefaultValue());
     paramSpec.setMember("locked", param->isLocked());
+
+    // Convert std::vector<std::string> to choc::value::Value
+    auto choicesArray = choc::value::createEmptyArray();
+    for (const auto& choice : param->getConfig()->choices) {
+        choicesArray.addArrayElement(choc::value::Value(choice));
+    }
+    paramSpec.setMember("choices", choicesArray);
 
     auto range = choc::value::createObject("range");
     range.setMember("min", param->getNormalisableRange().start);
