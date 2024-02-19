@@ -30,7 +30,8 @@ void imagiro::ParameterAttachment::addBindings() {
 
                 auto param = processor.getParameter(paramID);
                 if (param) {
-                    param->setValueNotifyingHost(newValue01);
+                    param->setValueAndNotifyHost(newValue01);
+
                 }
 
                 return choc::value::Value(param->getValue());
@@ -52,14 +53,14 @@ void imagiro::ParameterAttachment::addBindings() {
             "juce_startPluginParameterGesture",
             [&](const choc::value::ValueView &args) -> choc::value::Value {
                 auto param = processor.getParameter(args[0].toString());
-                if (param) param->beginChangeGesture();
+                if (param) param->beginUserAction();
                 return {};
             });
     webViewManager.bind(
             "juce_endPluginParameterGesture",
             [&](const choc::value::ValueView &args) -> choc::value::Value {
                 auto param = processor.getParameter(args[0].toString());
-                if (param) param->endChangeGesture();
+                if (param) param->endUserAction();
                 return {};
             });
 
@@ -111,7 +112,6 @@ void imagiro::ParameterAttachment::addBindings() {
 
                 auto val = param->getConfig()->valueFunction(*param, displayValue);
                 param->setUserValueAsUserAction(val);
-                sendStateToBrowser(param);
 
                 return {};
             }
@@ -165,12 +165,12 @@ choc::value::Value imagiro::ParameterAttachment::getParameterSpecValue(imagiro::
     paramSpec.setMember("choices", choicesArray);
 
     auto range = choc::value::createObject("range");
-    range.setMember("min", param->getUserRange().start);
-    range.setMember("max", param->getUserRange().end);
-    range.setMember("step", param->getUserRange().interval);
-    range.setMember("skew", param->getUserRange().skew);
+    range.setMember("min", param->getNormalisableRange().start);
+    range.setMember("max", param->getNormalisableRange().end);
+    jassert(!std::isinf(param->getNormalisableRange().interval));
+    range.setMember("step", param->getNormalisableRange().interval);
+    range.setMember("skew", param->getNormalisableRange().skew);
 
     paramSpec.setMember("range", range);
     return paramSpec;
 }
-
