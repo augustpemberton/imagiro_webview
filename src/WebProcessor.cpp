@@ -9,16 +9,19 @@
 
 namespace imagiro {
 
-    WebProcessor::WebProcessor(std::function<juce::String()> getParametersYAMLString, juce::String currentVersion, juce::String productSlug)
-            : Processor(getParametersYAMLString, currentVersion, productSlug)
+    WebProcessor::WebProcessor(AssetServer& server, juce::String parametersYAMLString, juce::String currentVersion, juce::String productSlug)
+            : Processor(parametersYAMLString, currentVersion, productSlug),
+              server(server)
     {
         init();
     }
 
     WebProcessor::WebProcessor(const juce::AudioProcessor::BusesProperties &ioLayouts,
-                               std::function<juce::String()> getParametersYAMLString,
+                               AssetServer& server,
+                               juce::String parametersYAMLString,
                                juce::String currentVersion, juce::String productSlug)
-            : Processor(ioLayouts, getParametersYAMLString, currentVersion, productSlug)
+            : Processor(ioLayouts, parametersYAMLString, currentVersion, productSlug),
+              server(server)
     {
         init();
     }

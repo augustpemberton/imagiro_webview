@@ -31,6 +31,7 @@ void imagiro::ParameterAttachment::addBindings() {
                 auto param = processor.getParameter(paramID);
                 if (param) {
                     param->setValueAndNotifyHost(newValue01);
+
                 }
 
                 return choc::value::Value(param->getValue());

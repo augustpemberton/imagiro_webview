@@ -7,7 +7,6 @@
 #include <choc/gui/choc_WebView.h>
 #include "WebProcessor.h"
 #include "ChocBrowserComponent.h"
-#include "WebUIDebugToolbar.h"
 
 namespace imagiro {
 class WebUIPluginEditor : public juce::AudioProcessorEditor, WebViewManager::Listener,
@@ -15,12 +14,10 @@ class WebUIPluginEditor : public juce::AudioProcessorEditor, WebViewManager::Lis
 public:
     WebUIPluginEditor(WebProcessor& p)
             : juce::AudioProcessorEditor(p),
-              browser(*this, p.getWebViewManager()),
-              debugToolbar(browser)
+              browser(*this, p.getWebViewManager())
     {
         setSize(400, 300);
         addAndMakeVisible(browser);
-//        addAndMakeVisible(debugToolbar);
         browser.getWebViewManager().addListener(this);
     }
 
@@ -86,9 +83,6 @@ public:
 
 private:
     ChocBrowserComponent browser;
-    WebUIDebugToolbar debugToolbar;
-
-
     std::unique_ptr<juce::FileChooser> fileChooser;
 };
 

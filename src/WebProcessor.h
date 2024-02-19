@@ -6,7 +6,7 @@
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <imagiro_processor/imagiro_processor.h>
 #include "WebViewManager.h"
-#include "imagiro_webview/src/ChocAssetsServer.h"
+#include "imagiro_webview/src/AssetServer/BinaryDataAssetServer.h"
 #include <memory>
 
 namespace imagiro {
@@ -15,9 +15,11 @@ class WebUIAttachment;
 
 class WebProcessor : public Processor {
 public:
-    WebProcessor(std::function<juce::String()> getParametersYAMLString, juce::String currentVersion = "1.0.0", juce::String productSlug = "");
+    WebProcessor(AssetServer& server, juce::String parametersYAMLString,
+                 juce::String currentVersion = "1.0.0", juce::String productSlug = "");
     WebProcessor(const juce::AudioProcessor::BusesProperties& ioLayouts,
-              std::function<juce::String()> getParametersYAMLString, juce::String currentVersion = "1.0.0", juce::String productSlug = "");
+                 AssetServer& server, juce::String parametersYAMLString,
+                 juce::String currentVersion = "1.0.0", juce::String productSlug = "");
 
     WebViewManager& getWebViewManager() { return webViewManager; }
     juce::AudioProcessorEditor* createEditor() override;
@@ -36,18 +38,8 @@ public:
     Preset createPreset(const juce::String &name, bool isDAWSaveState) override;
     void loadPreset(Preset preset) override;
 
-    // Override these in your subclass to provide the binary resources that the web view will serve
-    virtual const char* getNamedResource (const char* resourceNameUTF8, int& dataSizeInBytes) = 0;
-    virtual const char* getNamedResourceOriginalFilename (const char* resourceNameUTF8) = 0;
 protected:
-    ChocAssetsServer server {
-        [this](const char *resourceNameUTF8, int &dataSizeInBytes) {
-            return this->getNamedResource(resourceNameUTF8, dataSizeInBytes);
-        },
-        [this](const char *resourceNameUTF8) {
-            return this->getNamedResourceOriginalFilename(resourceNameUTF8);
-        }
-    };
+    AssetServer& server;
     WebViewManager webViewManager { server };
     std::vector<std::unique_ptr<WebUIAttachment>> uiAttachments;
 

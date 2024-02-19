@@ -257,7 +257,7 @@ namespace imagiro {
             webViewManager.bind(
                 "juce_getPluginName",
                 [&](const choc::value::ValueView &args) -> choc::value::Value {
-                    return choc::value::Value(PROJECT_NAME);
+                    return choc::value::Value(JucePlugin_Name);
                 }
             );
 
