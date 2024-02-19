@@ -7,7 +7,6 @@
 #include <choc/gui/choc_WebView.h>
 #include "WebProcessor.h"
 #include "ChocBrowserComponent.h"
-#include "WebUIDebugToolbar.h"
 
 namespace imagiro {
 class WebUIPluginEditor : public juce::AudioProcessorEditor, WebViewManager::Listener,
