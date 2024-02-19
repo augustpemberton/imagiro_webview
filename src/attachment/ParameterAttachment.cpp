@@ -30,7 +30,6 @@ void imagiro::ParameterAttachment::addBindings() {
 
                 auto param = processor.getParameter(paramID);
                 if (param) {
-//                    juce::ScopedValueSetter<Parameter*> svs (ignoreCallbackParam, param);
                     param->setValueNotifyingHost(newValue01);
                 }
 
@@ -121,8 +120,7 @@ void imagiro::ParameterAttachment::addBindings() {
 }
 
 void imagiro::ParameterAttachment::parameterChangedSync(imagiro::Parameter *param) {
-    if (ignoreCallbackParam != param)
-        sendStateToBrowser(param);
+    sendStateToBrowser(param);
 }
 
 void imagiro::ParameterAttachment::sendStateToBrowser(imagiro::Parameter *param) {
