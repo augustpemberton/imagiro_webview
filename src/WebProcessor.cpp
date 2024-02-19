@@ -9,15 +9,16 @@
 
 namespace imagiro {
 
-    WebProcessor::WebProcessor(juce::String currentVersion, juce::String productSlug)
-            : Processor(currentVersion, productSlug)
+    WebProcessor::WebProcessor(std::function<juce::String()> getParametersYAMLString, juce::String currentVersion, juce::String productSlug)
+            : Processor(getParametersYAMLString, currentVersion, productSlug)
     {
         init();
     }
 
     WebProcessor::WebProcessor(const juce::AudioProcessor::BusesProperties &ioLayouts,
+                               std::function<juce::String()> getParametersYAMLString,
                                juce::String currentVersion, juce::String productSlug)
-            : Processor(ioLayouts, currentVersion, productSlug)
+            : Processor(ioLayouts, getParametersYAMLString, currentVersion, productSlug)
     {
         init();
     }
@@ -49,11 +50,11 @@ namespace imagiro {
     }
 
     void WebProcessor::init() {
-        addUIAttachment(std::make_unique<ParameterAttachment>(*this, webView));
-        addUIAttachment(std::make_unique<PresetAttachment>(*this, webView));
-        addUIAttachment(std::make_unique<PluginInfoAttachment>(*this, webView));
-        addUIAttachment(std::make_unique<AuthAttachment>(*this, webView));
-        addUIAttachment(std::make_unique<FileIOAttachment>(*this, webView));
+        addUIAttachment(std::make_unique<ParameterAttachment>(*this, webViewManager));
+        addUIAttachment(std::make_unique<PresetAttachment>(*this, webViewManager));
+        addUIAttachment(std::make_unique<PluginInfoAttachment>(*this, webViewManager));
+        addUIAttachment(std::make_unique<AuthAttachment>(*this, webViewManager));
+        addUIAttachment(std::make_unique<FileIOAttachment>(*this, webViewManager));
     }
 
     void WebProcessor::addUIAttachment(WebUIAttachment& attachment) {

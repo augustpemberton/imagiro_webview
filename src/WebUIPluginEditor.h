@@ -88,8 +88,8 @@ private:
     ChocBrowserComponent browser;
     WebUIDebugToolbar debugToolbar;
 
+
     std::unique_ptr<juce::FileChooser> fileChooser;
 };
 
 }
-
