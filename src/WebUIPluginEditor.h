@@ -9,8 +9,7 @@
 #include "ChocBrowserComponent.h"
 
 namespace imagiro {
-class WebUIPluginEditor : public juce::AudioProcessorEditor, WebViewManager::Listener,
-                              public juce::FileDragAndDropTarget {
+class WebUIPluginEditor : public juce::AudioProcessorEditor, WebViewManager::Listener {
 public:
     WebUIPluginEditor(WebProcessor& p)
             : juce::AudioProcessorEditor(p),
@@ -71,14 +70,6 @@ public:
 //        debugToolbar.setBounds(b.removeFromBottom(20));
 //#endif
         browser.setBounds(b);
-    }
-
-    void filesDropped(const juce::StringArray &files, int x, int y) override {
-        DBG("files dropped");
-    }
-
-    bool isInterestedInFileDrag(const juce::StringArray &files) override {
-        return true;
     }
 
 private:
