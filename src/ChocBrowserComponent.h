@@ -12,7 +12,7 @@
 namespace imagiro {
 
     class ChocBrowserComponent
-            : public juce::Timer,
+            :
 #if JUCE_MAC
               public juce::NSViewComponent
 #elif JUCE_WINDOWS
@@ -20,9 +20,7 @@ namespace imagiro {
 #endif
     {
     public:
-        ChocBrowserComponent(juce::AudioProcessorEditor& editor, WebViewManager &w,
-                             bool sendMousePosition = false)
-                : webViewManager(w), sendMousePos(sendMousePosition) {
+        ChocBrowserComponent(juce::AudioProcessorEditor& editor, WebViewManager &w) : webViewManager(w) {
             webView = webViewManager.getWebView(&editor);
 #if JUCE_MAC
             setView(webView->getViewHandle());
@@ -30,16 +28,7 @@ namespace imagiro {
             setHWND(webView->getViewHandle());
 #endif
 
-            if (sendMousePos) startTimerHz(20);
             setOpaque(true);
-        }
-
-        void focusGained(juce::Component::FocusChangeType cause) override {
-            stopTimer();
-        }
-
-        void focusLost(juce::Component::FocusChangeType cause) override {
-            if (sendMousePos) startTimerHz(20);
         }
 
         ~ChocBrowserComponent() override {
@@ -51,23 +40,14 @@ namespace imagiro {
 #endif
         }
 
-        void timerCallback() override {
-            auto source = juce::Desktop::getInstance().getMainMouseSource();
-            auto mousePos = source.getScreenPosition();
-            mousePos -= getScreenPosition().toFloat();
-            lastMousePos = mousePos;
-
-            auto js = "if (window.ui.juceMouseMove !== undefined) window.ui.juceMouseMove(" + juce::String(mousePos.x) + ", " + juce::String(mousePos.y) + ")";
-            webView->evaluateJavascript(js.toStdString());
-        }
-
         WebViewManager &getWebViewManager() { return webViewManager; }
+
+        bool keyPressed(const juce::KeyPress &key) override {
+            return true;
+        }
 
     private:
         WebViewManager &webViewManager;
         std::shared_ptr<choc::ui::WebView> webView;
-        juce::Point<float> lastMousePos;
-
-        bool sendMousePos;
     };
 }
