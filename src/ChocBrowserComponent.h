@@ -7,7 +7,9 @@
 #include "WebViewManager.h"
 #include "juce_gui_extra/embedding/juce_NSViewComponent.h"
 #include "juce_gui_extra/embedding/juce_HWNDComponent.h"
+#if JUCE_WINDOWS
 #include "WinKeypressWorkaround.h"
+#endif
 
 namespace imagiro {
 
@@ -42,12 +44,6 @@ namespace imagiro {
         }
 
         WebViewManager &getWebViewManager() { return webViewManager; }
-
-        bool keyPressed(const juce::KeyPress &key) override {
-            std::cout << key.getTextCharacter();
-            DBG(key.getTextCharacter());
-            return false;
-        }
 
     private:
         WebViewManager &webViewManager;
