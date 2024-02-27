@@ -39,7 +39,7 @@ namespace imagiro {
             int resourceSize = 0;
             auto resource = getNamedResource(resourceName.c_str(), resourceSize);
             if (!resource) {
-                jassert(resourceName == "favicon_ico"); // probably an error if theres something that isnt the favicon we cant find
+                jassert(resourceName == "favicon_ico" || resourceName == "index_html"); // probably an error if theres something that isnt the favicon we cant find
                 return {};
             }
 

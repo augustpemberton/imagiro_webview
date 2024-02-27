@@ -7,7 +7,7 @@
 #include "WebViewManager.h"
 #include "juce_gui_extra/embedding/juce_NSViewComponent.h"
 #include "juce_gui_extra/embedding/juce_HWNDComponent.h"
-
+#include "WinKeypressWorkaround.h"
 
 namespace imagiro {
 
@@ -26,6 +26,7 @@ namespace imagiro {
             setView(webView->getViewHandle());
 #elif JUCE_WINDOWS
             setHWND(webView->getViewHandle());
+            wKW = std::make_unique<WinKeypressWorkaround>(*webView, *this);
 #endif
 
             setOpaque(true);
@@ -43,11 +44,17 @@ namespace imagiro {
         WebViewManager &getWebViewManager() { return webViewManager; }
 
         bool keyPressed(const juce::KeyPress &key) override {
-            return true;
+            std::cout << key.getTextCharacter();
+            DBG(key.getTextCharacter());
+            return false;
         }
 
     private:
         WebViewManager &webViewManager;
         std::shared_ptr<choc::ui::WebView> webView;
+
+#if JUCE_WINDOWS
+        std::unique_ptr<WinKeypressWorkaround> wKW;
+#endif
     };
 }
