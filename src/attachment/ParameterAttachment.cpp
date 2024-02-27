@@ -30,7 +30,7 @@ void imagiro::ParameterAttachment::addBindings() {
 
                 auto param = processor.getParameter(paramID);
                 if (param) {
-                    param->setValueAndNotifyHost(newValue01);
+                    param->setValueAndNotifyHost(juce::jlimit(0.f, 1.f, (float)newValue01));
 
                 }
 
