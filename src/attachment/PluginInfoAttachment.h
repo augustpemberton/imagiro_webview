@@ -268,6 +268,11 @@ namespace imagiro {
                     auto value = std::string(args[1].getWithDefault(""));
 
                     processor.getWebViewData().setMember(key, value);
+
+                    std::string js = "window.ui.processorValueUpdated(";
+                    js += "'"; js += key; js += "',";
+                    js += "'"; js += value; js += "');";
+                    webViewManager.evaluateJavascript(js);
                     return {};
                 });
 
@@ -285,6 +290,8 @@ namespace imagiro {
                 [&](const choc::value::ValueView &args) -> choc::value::Value {
                     auto key = args[0].toString();
 
+                    std::string valString;
+
                     auto& configFile = Resources::getInstance()->getConfigFile();
                     if (args[1].isFloat32()) {
                         configFile->setValue(juce::String(key), args[1].getFloat32());
@@ -299,6 +306,13 @@ namespace imagiro {
                     } else {
                         configFile->setValue(juce::String(key), juce::String(choc::json::toString(args[1])));
                     }
+
+                    configFile->save();
+
+                    std::string js = "window.ui.configValueUpdated(";
+                    js += "'"; js += key; js += "',";
+                    js += "'"; js += configFile->getValue(key).toStdString(); js += "');";
+                    webViewManager.evaluateJavascript(js);
                     return {};
                 }
             );
