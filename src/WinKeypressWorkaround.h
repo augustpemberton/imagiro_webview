@@ -4,43 +4,43 @@
 
 #pragma once
 
-struct BufferedEvent {
-    INPUT i;
-    int lifetime {0};
-};
-
 class WinKeypressWorkaround : choc::ui::WebView::KeyListener, juce::Timer {
 public:
     WinKeypressWorkaround(choc::ui::WebView& w, juce::Component& c) : webView(w), component(c) {
-        startTimerHz(5);
         webView.addKeyListener(this);
 
-        dawHandle = GetForegroundWindow();
+        startTimerHz(1);
     }
 
     ~WinKeypressWorkaround() override {
         webView.removeKeyListener(this);
     }
 
-    void onKeyDown(std::string keyCode) override {
-        queueKeypress(keyCode.c_str()[0], true);
+    void onKeyDown(std::string key) override {
+        auto scanCode = getScanCode(key[0]);
+        auto event = createKeypress(scanCode, true);
+        sendKeypress(event);
     }
 
-    void onKeyUp(std::string keyCode) override {
-        queueKeypress(keyCode.c_str()[0], false);
+    void onKeyUp(std::string key) override {
+        auto scanCode = getScanCode(key[0]);
+        auto event = createKeypress(scanCode, false);
+        sendKeypress(event);
     }
 
-    void queueKeypress(unsigned char key, bool down) {
-        // Convert the character to a virtual key code
+    static unsigned int getScanCode(char key) {
         SHORT vkCode = VkKeyScan(key);
-        if (vkCode == -1) return;
+        if (vkCode == -1) return 0;
 
         // Extract the virtual key code
         UINT vk = LOBYTE(vkCode);
 
         // Convert the virtual key code to a scan code
         UINT scanCode = MapVirtualKey(vk, MAPVK_VK_TO_VSC);
+        return scanCode;
+    }
 
+    static INPUT createKeypress(unsigned int scanCode, bool down) {
         INPUT input = {};
         input.type = INPUT_KEYBOARD;
         input.ki.wVk = 0;
@@ -49,38 +49,30 @@ public:
         input.ki.time = 0;
         input.ki.dwExtraInfo = GetMessageExtraInfo();
 
-        eventsToSend.insert(std::make_unique<BufferedEvent>(input));
+        return input;
+    }
+
+    void sendKeypress(INPUT event) {
+        resetWindow = GetFocus();
+        auto nativeWindow = (HWND) component.getTopLevelComponent()->getPeer()->getNativeHandle();
+        SetFocus(nativeWindow);
+
+        SendInput(1, &event, sizeof(INPUT));
+
+        startTimer(30);
     }
 
     void timerCallback() override {
-
-        auto nativeWindow = (HWND) component.getParentComponent()->getPeer()->getNativeHandle();
-        SetFocus(nativeWindow);
-
-        queueKeypress(' ', false);
-
-//        for (auto it=eventsToSend.begin(); it != eventsToSend.end(); ) {
-//            auto& event = (*it);
-//            event->lifetime--;
-//            if (event->lifetime <= 0) {
-//                SetForegroundWindow((HWND)component.getTopLevelComponent()->getPeer()->getNativeHandle());
-//                SetFocus((HWND)component.getTopLevelComponent()->getPeer()->getNativeHandle());
-//                SendInput(1, &event->i, sizeof(INPUT));
-//                SendInput(1, &event->i, sizeof(INPUT));
-//                SendInput(1, &event->i, sizeof(INPUT));
-//                SendInput(1, &event->i, sizeof(INPUT));
-//                SendInput(1, &event->i, sizeof(INPUT));
-//                it = eventsToSend.erase(it);
-//            } else it++;
-//        }
+        SetFocus(resetWindow);
+        stopTimer();
     }
 
 private:
     choc::ui::WebView& webView;
     juce::Component& component;
 
-    HWND dawHandle;
+    std::atomic<HWND> resetWindow;
 
-    std::unordered_set<std::unique_ptr<BufferedEvent>> eventsToSend;
+    moodycamel::ReaderWriterQueue<INPUT> eventsToSend;
 };
 
