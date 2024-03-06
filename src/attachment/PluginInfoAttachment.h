@@ -157,6 +157,11 @@ namespace imagiro {
             webViewManager.bind(
                 "juce_getAvailableSampleRates",
                 [&](const choc::value::ValueView &args) -> choc::value::Value {
+                    auto standaloneInstance = juce::StandalonePluginHolder::getInstance();
+                    if (!standaloneInstance) {
+                        return {};
+                    }
+
                     const auto &deviceManager = juce::StandalonePluginHolder::getInstance()->deviceManager;
                     if (!deviceManager.getCurrentAudioDevice()) return choc::value::createEmptyArray();
                     auto sampleRates = deviceManager.getCurrentAudioDevice()->getAvailableSampleRates();
@@ -171,6 +176,10 @@ namespace imagiro {
             webViewManager.bind(
                 "juce_getAvailableBufferSizes",
                 [&](const choc::value::ValueView &args) -> choc::value::Value {
+                    auto standaloneInstance = juce::StandalonePluginHolder::getInstance();
+                    if (!standaloneInstance) {
+                        return {};
+                    }
                     const auto &deviceManager = juce::StandalonePluginHolder::getInstance()->deviceManager;
                     if (!deviceManager.getCurrentAudioDevice()) return choc::value::createEmptyArray();
                     auto bufferSizes = deviceManager.getCurrentAudioDevice()->getAvailableBufferSizes();
@@ -185,6 +194,11 @@ namespace imagiro {
             webViewManager.bind(
                 "juce_getAvailableOutputDevices",
                 [&](const choc::value::ValueView &args) -> choc::value::Value {
+                    auto standaloneInstance = juce::StandalonePluginHolder::getInstance();
+                    if (!standaloneInstance) {
+                        return {};
+                    }
+
                     const auto &deviceManager = juce::StandalonePluginHolder::getInstance()->deviceManager;
                     const auto deviceType = deviceManager.getCurrentDeviceTypeObject();
 
@@ -198,6 +212,10 @@ namespace imagiro {
             webViewManager.bind(
                 "juce_getAvailableInputDevices",
                 [&](const choc::value::ValueView &args) -> choc::value::Value {
+                    auto standaloneInstance = juce::StandalonePluginHolder::getInstance();
+                    if (!standaloneInstance) {
+                        return {};
+                    }
                     auto &deviceManager = juce::StandalonePluginHolder::getInstance()->deviceManager;
                     auto deviceType = deviceManager.getCurrentDeviceTypeObject();
 
@@ -211,6 +229,10 @@ namespace imagiro {
             webViewManager.bind(
                 "juce_getAvailableMidiInputDevices",
                 [&](const choc::value::ValueView &args) -> choc::value::Value {
+                    auto standaloneInstance = juce::StandalonePluginHolder::getInstance();
+                    if (!standaloneInstance) {
+                        return {};
+                    }
                     auto &deviceManager = juce::StandalonePluginHolder::getInstance()->deviceManager;
                     auto midiInputs = juce::MidiInput::getAvailableDevices();
 
@@ -228,6 +250,11 @@ namespace imagiro {
             webViewManager.bind(
                 "juce_setMidiInputDevicesEnabled",
                 [&](const choc::value::ValueView &args) -> choc::value::Value {
+
+                    auto standaloneInstance = juce::StandalonePluginHolder::getInstance();
+                    if (!standaloneInstance) {
+                        return {};
+                    }
                     auto &deviceManager = juce::StandalonePluginHolder::getInstance()->deviceManager;
                     auto devicesValue = args[0];
                     for (auto d: devicesValue) {
