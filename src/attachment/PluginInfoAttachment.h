@@ -102,7 +102,12 @@ namespace imagiro {
             webViewManager.bind(
                 "juce_getAudioDeviceSetup",
                 [&](const choc::value::ValueView &args) -> choc::value::Value {
-                    const auto &deviceManager = juce::StandalonePluginHolder::getInstance()->deviceManager;
+                    auto standaloneInstance = juce::StandalonePluginHolder::getInstance();
+                    if (!standaloneInstance) {
+                        return {};
+                    }
+
+                    const auto &deviceManager = standaloneInstance->deviceManager;
                     const auto currentSetup = deviceManager.getAudioDeviceSetup();
 
                     auto setupValue = choc::value::createObject("AudioDeviceSetup");
@@ -119,9 +124,13 @@ namespace imagiro {
             webViewManager.bind(
                 "juce_setAudioDeviceSetup",
                 [&](const choc::value::ValueView &args) -> choc::value::Value {
-                    const auto setupObj = args[0];
+                    auto standaloneInstance = juce::StandalonePluginHolder::getInstance();
+                    if (!standaloneInstance) {
+                        return {};
+                    }
 
-                    auto &deviceManager = juce::StandalonePluginHolder::getInstance()->deviceManager;
+                    const auto setupObj = args[0];
+                    auto &deviceManager = standaloneInstance->deviceManager;
                     const auto currentSetup = deviceManager.getAudioDeviceSetup();
 
                     auto newOutputDevice = std::string(setupObj["outputDeviceName"].getString());
