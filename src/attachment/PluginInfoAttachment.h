@@ -64,6 +64,7 @@ namespace imagiro {
             webViewManager.bind(
                 "juce_showStandaloneAudioSettings",
                 [&](const choc::value::ValueView &args) -> choc::value::Value {
+                    if (!juce::StandalonePluginHolder::getInstance()) return {};
                     juce::StandalonePluginHolder::getInstance()->showAudioSettingsDialog();
                     return {};
                 }
@@ -72,6 +73,10 @@ namespace imagiro {
             webViewManager.bind(
                 "juce_setAudioDeviceType",
                 [&](const choc::value::ValueView &args) -> choc::value::Value {
+                    auto standaloneInstance = juce::StandalonePluginHolder::getInstance();
+                    if (!standaloneInstance) {
+                        return {};
+                    }
                     auto &deviceManager = juce::StandalonePluginHolder::getInstance()->deviceManager;
                     auto typeName = args[0].getWithDefault("");
                     deviceManager.setCurrentAudioDeviceType(typeName, true);
@@ -81,6 +86,10 @@ namespace imagiro {
             webViewManager.bind(
                 "juce_getAudioDeviceType",
                 [&](const choc::value::ValueView &args) -> choc::value::Value {
+                    auto standaloneInstance = juce::StandalonePluginHolder::getInstance();
+                    if (!standaloneInstance) {
+                        return {};
+                    }
                     auto &deviceManager = juce::StandalonePluginHolder::getInstance()->deviceManager;
                     if (!deviceManager.getCurrentAudioDevice()) return choc::value::Value{std::string("")};
                     return choc::value::Value{deviceManager.getCurrentAudioDeviceType().toStdString()};
@@ -89,6 +98,10 @@ namespace imagiro {
             webViewManager.bind(
                 "juce_getAudioDeviceTypes",
                 [&](const choc::value::ValueView &args) -> choc::value::Value {
+                    auto standaloneInstance = juce::StandalonePluginHolder::getInstance();
+                    if (!standaloneInstance) {
+                        return {};
+                    }
                     auto &deviceManager = juce::StandalonePluginHolder::getInstance()->deviceManager;
 
                     auto types = choc::value::createEmptyArray();
