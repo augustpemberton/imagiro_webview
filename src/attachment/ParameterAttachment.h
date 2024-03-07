@@ -15,7 +15,7 @@ namespace imagiro {
         void addListeners() override;
         void addBindings() override;
 
-        void parameterChangedSync(Parameter *param) override;
+        void parameterChanged(Parameter *param) override;
         void configChanged(imagiro::Parameter *param) override;
 
     private:

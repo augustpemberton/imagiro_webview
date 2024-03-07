@@ -119,7 +119,7 @@ void imagiro::ParameterAttachment::addBindings() {
 
 }
 
-void imagiro::ParameterAttachment::parameterChangedSync(imagiro::Parameter *param) {
+void imagiro::ParameterAttachment::parameterChanged(imagiro::Parameter *param) {
     sendStateToBrowser(param);
 }
 
