@@ -19,7 +19,7 @@ namespace imagiro {
     WebProcessor::WebProcessor(const juce::AudioProcessor::BusesProperties &ioLayouts,
                                AssetServer& server,
                                juce::String parametersYAMLString,
-                               juce::String currentVersion, juce::String productSlug)
+                               juce::String currentVersion, juce::String productSoug)
             : Processor(ioLayouts, parametersYAMLString, currentVersion, productSlug),
               server(server)
     {
