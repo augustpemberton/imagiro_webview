@@ -19,9 +19,7 @@ namespace imagiro {
                 : getNamedResource(getNamedResourceLambda),
                   getNamedResourceOriginalFilename(getNamedResourceOriginalFilenameLambda) {}
 
-        std::optional<WebView::Options::Resource> getResource(const choc::ui::WebView::Options::Path& p,
-                                                              const choc::ui::WebView::Options::Method & m,
-                                                              const choc::ui::WebView::Options::Headers& h) override {
+        std::optional<WebView::Options::Resource> getResource(const choc::ui::WebView::Options::Path& p) override {
 //            if (p.starts_with("http")) {
 //                return getWebResource(juce::URL(p));
 //            }
@@ -49,28 +47,8 @@ namespace imagiro {
                     resourceName.c_str()));
 
             auto fileExtension = filePath.substr(filePath.find_last_of(".") + 1);
-
-            for (const auto& [k, v] : h) {
-                DBG(p << "=====================");
-                DBG(m);
-                DBG(k << " => " << v);
-            }
-
-            juce::Range<int> byteRange = {-1, -1};
-            if (h.contains("Range")) {
-                auto rangeString = juce::String(h.at("Range"));
-                auto rangeParts = juce::StringArray::fromTokens(rangeString, "=", "");
-                jassert(rangeParts.size() == 2);
-                jassert(rangeParts[0] == "bytes");
-                auto byteRangeStrings = juce::StringArray::fromTokens(rangeParts[1], "-", "");
-                jassert(byteRangeStrings.size() == 2);
-
-                byteRange.setEnd(byteRangeStrings[1].getIntValue());
-                byteRange.setStart(byteRangeStrings[0].getIntValue());
-            }
-
             return toResource(resource, resourceSize,
-                              getMimeType(fileExtension), m, byteRange);
+                              getMimeType(fileExtension));
         }
 //
 //        std::optional<WebView::Options::Resource> getWebResource(juce::URL url) {
@@ -105,29 +83,18 @@ namespace imagiro {
             if (extension == "png")  return "image/png";
             if (extension == "wasm") return "application/wasm";
             if (extension == "woff2") return "font/woff2";
+            if (extension == "ttf") return "font/ttf";
             if (extension == "webm") return "video/webm";
 
             return "application/octet-stream";
         }
 
-        WebView::Options::Resource toResource(const char* data, int size, const std::string& mimeType,
-                                              const std::string& methodType,
-                                              juce::Range<int> byteRange = {-1, -1}) {
+        WebView::Options::Resource toResource(const char* data, int size, const std::string& mimeType) {
             std::vector<uint8_t> d;
             std::string contentRange;
 
-            if (byteRange.getStart() == -1 || byteRange.getEnd() > size) {
-                d.assign(reinterpret_cast<const uint8_t*>(&data[0]), reinterpret_cast<const uint8_t*>(&data[size]));
-                return {d, mimeType};
-            } else {
-                // Validate and adjust the range to ensure it's within the data size.
-                int start = std::max(0, byteRange.getStart());
-                int end = std::min(size, byteRange.getEnd());
-
-                d.assign(reinterpret_cast<const uint8_t*>(&data[start]), reinterpret_cast<const uint8_t*>(&data[end+1]));
-                contentRange = "bytes " + std::to_string(start) + "-" + std::to_string(std::max(0, end)) + "/" + std::to_string(size);
-                return {d, mimeType, contentRange};
-            }
+            d.assign(reinterpret_cast<const uint8_t*>(&data[0]), reinterpret_cast<const uint8_t*>(&data[size]));
+            return {d, mimeType};
         }
 //
 //        WebView::Options::Resource toResource(juce::String data, const std::string& mimeType,
