@@ -45,8 +45,8 @@ namespace imagiro {
                     choc::ui::WebView::Options
                             {
                                     true, true, "",
-                                    [&](auto& path) {
-                                        return server.getResource(path);
+                                    [&](auto& path, auto& method, auto& headers) {
+                                        return server.getResource(path, method, headers);
                                     }
                             }
             );
