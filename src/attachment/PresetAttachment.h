@@ -289,10 +289,8 @@ class PresetAttachment : public WebUIAttachment, public Processor::PresetListene
                     [&](const choc::value::ValueView &args) -> choc::value::Value {
                         auto string = std::string(args[0].getWithDefault(""));
 
-                        int level = Z_BEST_COMPRESSION;
                         auto compressedPresetString = gzip::compress(string.data(),
-                                                                     string.size(),
-                                                                     level);
+                                                                     string.size());
 
                         juce::MemoryOutputStream encodedStream;
                         juce::Base64::convertToBase64(encodedStream, compressedPresetString.data(),
