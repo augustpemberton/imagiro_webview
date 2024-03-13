@@ -5,7 +5,7 @@
 #pragma once
 #include "WebUIAttachment.h"
 #include <imagiro_processor/imagiro_processor.h>
-#include <imagiro_util/imagiro_util.h>
+#include <zstr.hpp>
 
 namespace imagiro {
 class PresetAttachment : public WebUIAttachment, public Processor::PresetListener, public FileSystemWatcher::Listener {
@@ -289,8 +289,13 @@ class PresetAttachment : public WebUIAttachment, public Processor::PresetListene
                     [&](const choc::value::ValueView &args) -> choc::value::Value {
                         auto string = std::string(args[0].getWithDefault(""));
 
-                        auto compressedPresetString = gzip::compress(string.data(),
-                                                                     string.size());
+                        std::stringstream compressedStream;
+                        {
+                            zstr::ostream zout(compressedStream);
+                            zout << string;
+                        }
+
+                        auto compressedPresetString = compressedStream.str();
 
                         juce::MemoryOutputStream encodedStream;
                         juce::Base64::convertToBase64(encodedStream, compressedPresetString.data(),
@@ -308,10 +313,16 @@ class PresetAttachment : public WebUIAttachment, public Processor::PresetListene
                             return {};
                         }
 
+                        std::string compressedString (static_cast<const char*>(decodedStream.getData()),
+                                                      decodedStream.getDataSize());
+
                         try {
-                            auto decodedString = gzip::decompress(static_cast<const char*>(decodedStream.getData()),
-                                                                     decodedStream.getDataSize());
-                            return choc::value::Value (decodedString);
+                            std::stringstream decompressedStream(compressedString);
+                            zstr::istream zin(decompressedStream);
+                            std::string decompressedString;
+                            std::getline(zin, decompressedString);
+
+                            return choc::value::Value (decompressedString);
                         } catch (std::runtime_error& e) {
                             DBG(e.what());
                             return {};
