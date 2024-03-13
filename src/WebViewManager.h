@@ -138,6 +138,6 @@ namespace imagiro {
 
         AssetServer& server;
 
-        moodycamel::ReaderWriterQueue<std::string> jsEvalQueue {2048};
+        moodycamel::ConcurrentQueue<std::string> jsEvalQueue {256};
     };
 }
