@@ -54,12 +54,12 @@ namespace imagiro {
 
         static void bindEditorSpecificFunctions(choc::ui::WebView& view, juce::AudioProcessorEditor* editor) {
             view.bind( "juce_setWindowSize",
-                      [editor](const choc::value::ValueView &args) -> choc::value::Value {
+                      wrapFn([editor](const choc::value::ValueView &args) -> choc::value::Value {
                           auto x = args[0].getWithDefault(500);
                           auto y = args[1].getWithDefault(400);
                           editor->setSize(x, y);
                           return {};
-                      }
+                      })
             );
         }
 
@@ -96,12 +96,29 @@ namespace imagiro {
         }
 
         void bind(const std::string &functionName, choc::ui::WebView::CallbackFn &&fn) {
-            choc::ui::WebView::CallbackFn func = fn;
+            choc::ui::WebView::CallbackFn func = wrapFn(fn);
+
             for (auto wv : activeWebViews) {
                 auto funcCopy = func;
                 wv->bind(functionName, std::move(funcCopy));
             }
             fnsToBind.emplace_back(functionName, std::move(func));
+        }
+
+        static choc::ui::WebView::CallbackFn wrapFn(choc::ui::WebView::CallbackFn func) {
+            return [func](const choc::value::ValueView& args) -> choc::value::Value {
+                auto responseState = choc::value::createObject("Response");
+                try {
+                    auto response = func(args);
+                    responseState.setMember("status", "ok");
+                    responseState.setMember("data", response);
+                    return responseState;
+                } catch (std::exception& e) {
+                    responseState.setMember("status", "error");
+                    responseState.setMember("error", e.what());
+                    return responseState;
+                }
+            };
         }
 
         void requestFileChooser(juce::String patternsAllowed = "*.wav") {
