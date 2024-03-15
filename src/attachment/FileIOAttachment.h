@@ -11,6 +11,12 @@ namespace imagiro {
         using WebUIAttachment::WebUIAttachment;
 
         void addBindings() override {
+            webViewManager.bind("juce_doesFileExist",
+                                [&](const choc::value::ValueView& args) -> choc::value::Value {
+                const auto path = args[0].getWithDefault("");
+                return choc::value::Value(juce::File(path).exists());
+            });
+
             webViewManager.bind("juce_requestFileChooser",
             [&](const choc::value::ValueView& args) -> choc::value::Value {
                 webViewManager.requestFileChooser(args[0].toString());

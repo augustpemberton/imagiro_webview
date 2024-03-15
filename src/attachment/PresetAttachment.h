@@ -5,7 +5,7 @@
 #pragma once
 #include "WebUIAttachment.h"
 #include <imagiro_processor/imagiro_processor.h>
-#include <zstr.hpp>
+#include <imagiro_util/imagiro_util.h>
 
 namespace imagiro {
 class PresetAttachment : public WebUIAttachment, public Processor::PresetListener, public FileSystemWatcher::Listener {
