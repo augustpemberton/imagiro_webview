@@ -29,7 +29,12 @@ public:
     virtual juce::Point<int> getResizeMin() { return {200, 200}; }
     virtual juce::Point<int> getResizeMax() { return {1500, 1500}; }
 
-    virtual bool isResizable() { return false; }
+    enum class ResizeType {
+        Resizable,
+        FixedAspect,
+        NonResizable
+    };
+    virtual ResizeType isResizable() { return ResizeType::NonResizable; }
 
     void addUIAttachment(WebUIAttachment& attachment);
 

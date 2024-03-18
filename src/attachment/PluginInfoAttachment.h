@@ -449,6 +449,15 @@ namespace imagiro {
                     [&](const choc::value::ValueView &args) -> choc::value::Value {
                         return choc::value::Value(uuid.toString().toStdString());
                     });
+
+            webViewManager.bind("juce_getDefaultWindowSize",
+                                [&](const choc::value::ValueView &args) -> choc::value::Value {
+                                    const auto size = processor.getDefaultWindowSize();
+                                    auto state = choc::value::createObject("WindowSize");
+                                    state.setMember("x", size.x);
+                                    state.setMember("y", size.y);
+                                    return state;
+                                });
         }
 
     private:

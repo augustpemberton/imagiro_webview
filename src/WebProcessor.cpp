@@ -33,11 +33,16 @@ namespace imagiro {
 #else
         e = WebUIPluginEditor::create(*this);
 #endif
-        e->setSize(getDefaultWindowSize().x, getDefaultWindowSize().y);
-        if (isResizable()) {
+
+        auto defaultSize = getDefaultWindowSize();
+        e->setSize(defaultSize.x, defaultSize.y);
+        if (isResizable() != ResizeType::NonResizable) {
             e->setResizable(true, true);
             e->setResizeLimits(getResizeMin().x, getResizeMin().y,
                                getResizeMax().x, getResizeMax().y);
+            if (isResizable() == ResizeType::FixedAspect) {
+                e->getConstrainer()->setFixedAspectRatio(defaultSize.x / (float) defaultSize.y);
+            }
         }
 
         if(wrapperType == wrapperType_Standalone)
