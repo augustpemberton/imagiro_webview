@@ -17,6 +17,12 @@ namespace imagiro {
                 return choc::value::Value(juce::File(path).exists());
             });
 
+            webViewManager.bind("juce_doesFileHaveWriteAccess",
+                                [&](const choc::value::ValueView& args) -> choc::value::Value {
+                                    const auto path = args[0].getWithDefault("");
+                                    return choc::value::Value(juce::File(path).hasWriteAccess());
+                                });
+
             webViewManager.bind("juce_requestFileChooser",
             [&](const choc::value::ValueView& args) -> choc::value::Value {
                 webViewManager.requestFileChooser(args[0].toString());
