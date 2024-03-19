@@ -39,20 +39,6 @@ namespace imagiro {
                 return {};
             });
 
-            webViewManager.bind("juce_copyToClipboard",
-                [&](const choc::value::ValueView& args) -> choc::value::Value {
-                    juce::SystemClipboard::copyTextToClipboard(args[0].toString());
-                    return {};
-                }
-            );
-
-            webViewManager.bind("juce_getTextFromClipboard",
-                [&](const choc::value::ValueView& args) -> choc::value::Value {
-                    return choc::value::Value(
-                            juce::SystemClipboard::getTextFromClipboard().toStdString()
-                    );
-                }
-            );
         }
     };
 

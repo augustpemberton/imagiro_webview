@@ -283,51 +283,6 @@ class PresetAttachment : public WebUIAttachment, public Processor::PresetListene
                         presetFile.revealToUser();
                         return {};
                     });
-
-            webViewManager.bind(
-                    "juce_compressedB64",
-                    [&](const choc::value::ValueView &args) -> choc::value::Value {
-                        auto string = std::string(args[0].getWithDefault(""));
-
-                        std::stringstream compressedStream;
-                        {
-                            zstr::ostream zout(compressedStream);
-                            zout << string;
-                        }
-
-                        auto compressedPresetString = compressedStream.str();
-
-                        juce::MemoryOutputStream encodedStream;
-                        juce::Base64::convertToBase64(encodedStream, compressedPresetString.data(),
-                                                      compressedPresetString.size());
-                        return choc::value::Value {encodedStream.toString().toStdString()};
-                    });
-
-            webViewManager.bind(
-                    "juce_decompressB64",
-                    [&](const choc::value::ValueView &args) -> choc::value::Value {
-                        auto encodedString = args[0].getWithDefault("");
-
-                        juce::MemoryOutputStream decodedStream;
-                        if (!juce::Base64::convertFromBase64(decodedStream, encodedString)) {
-                            return {};
-                        }
-
-                        std::string compressedString (static_cast<const char*>(decodedStream.getData()),
-                                                      decodedStream.getDataSize());
-
-                        try {
-                            std::stringstream decompressedStream(compressedString);
-                            zstr::istream zin(decompressedStream);
-                            std::string decompressedString;
-                            std::getline(zin, decompressedString);
-
-                            return choc::value::Value (decompressedString);
-                        } catch (std::runtime_error& e) {
-                            DBG(e.what());
-                            return {};
-                        }
-                    });
         }
 
         void OnPresetChange(Preset &preset) override {

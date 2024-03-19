@@ -311,73 +311,6 @@ namespace imagiro {
             );
 
             webViewManager.bind(
-                "juce_saveInProcessor", [&](const choc::value::ValueView &args) -> choc::value::Value {
-                    auto key = std::string(args[0].getWithDefault(""));
-                    if (key.empty()) return {};
-                    auto value = std::string(args[1].getWithDefault(""));
-
-                    processor.getWebViewData().setMember(key, value);
-
-                    std::string js = "window.ui.processorValueUpdated(";
-                    js += "'"; js += key; js += "',";
-                    js += "'"; js += value; js += "');";
-                    webViewManager.evaluateJavascript(js);
-                    return {};
-                });
-
-            webViewManager.bind(
-                "juce_loadFromProcessor", [&](const choc::value::ValueView &args) -> choc::value::Value {
-                    auto key = std::string(args[0].getWithDefault(""));
-                    if (key.empty()) return {};
-
-                    if (!processor.getWebViewData().hasObjectMember(key)) return {};
-                    return choc::value::Value(processor.getWebViewData()[key]);
-                });
-
-            webViewManager.bind(
-                "juce_setConfig",
-                [&](const choc::value::ValueView &args) -> choc::value::Value {
-                    auto key = args[0].toString();
-
-                    std::string valString;
-
-                    auto& configFile = Resources::getInstance()->getConfigFile();
-                    if (args[1].isFloat32()) {
-                        configFile->setValue(juce::String(key), args[1].getFloat32());
-                    } else if (args[1].isFloat64()) {
-                        configFile->setValue(juce::String(key), args[1].getFloat64());
-                    } else if (args[1].isInt()) {
-                        configFile->setValue(juce::String(key), args[1].getWithDefault(0));
-                    } else if (args[1].isBool()) {
-                        configFile->setValue(juce::String(key), args[1].getBool());
-                    } else if (args[1].isString()) {
-                        configFile->setValue(juce::String(key), juce::String(args[1].toString()));
-                    } else {
-                        configFile->setValue(juce::String(key), juce::String(choc::json::toString(args[1])));
-                    }
-
-                    configFile->save();
-
-                    std::string js = "window.ui.configValueUpdated(";
-                    js += "'"; js += key; js += "',";
-                    js += "'"; js += configFile->getValue(key).toStdString(); js += "');";
-                    webViewManager.evaluateJavascript(js);
-                    return {};
-                }
-            );
-            webViewManager.bind(
-                "juce_getConfig",
-                [&](const choc::value::ValueView &args) -> choc::value::Value {
-                    auto key = juce::String(args[0].toString());
-                    auto& configFile = Resources::getInstance()->getConfigFile();
-                    if (!configFile->containsKey(key)) return {};
-
-                    auto val = configFile->getValue(key);
-
-                    return choc::value::Value(val.toStdString());
-                }
-            );
-            webViewManager.bind(
                 "juce_getIsUpdateAvailable",
                 [&](const choc::value::ValueView &args) -> choc::value::Value {
                     auto newVersion = processor.getVersionManager().isUpdateAvailable();
@@ -437,13 +370,7 @@ namespace imagiro {
                     return choc::value::Value(processor.getCpuLoad());
                 }
             );
-            webViewManager.bind(
-                "juce_Log",
-                [&](const choc::value::ValueView &args) -> choc::value::Value {
-                    auto string = args[0].getWithDefault("");
-                    juce::Logger::outputDebugString(string);
-                    return {};
-                });
+
             webViewManager.bind(
                     "juce_getUUID",
                     [&](const choc::value::ValueView &args) -> choc::value::Value {
