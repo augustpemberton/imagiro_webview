@@ -41,10 +41,15 @@ namespace imagiro {
         }
 
         std::shared_ptr<choc::ui::WebView> createWebView() {
+#if DEBUG
+            auto debugMode = true;
+#else
+            auto debugMode = false;
+#endif
             return std::make_shared<choc::ui::WebView>(
                     choc::ui::WebView::Options
                             {
-                                    true, true, "",
+                                    debugMode, true, "",
                                     [&](auto& path) {
                                         return server.getResource(path);
                                     }
