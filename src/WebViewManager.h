@@ -41,7 +41,7 @@ namespace imagiro {
         }
 
         std::shared_ptr<choc::ui::WebView> createWebView() {
-#if DEBUG
+#if JUCE_DEBUG || defined(BETA)
             auto debugMode = true;
 #else
             auto debugMode = false;
