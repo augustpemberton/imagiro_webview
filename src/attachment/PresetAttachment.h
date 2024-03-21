@@ -91,8 +91,10 @@ class PresetAttachment : public WebUIAttachment, public Processor::PresetListene
                     "juce_createPreset",
                     [&](const choc::value::ValueView &args) -> choc::value::Value {
                         auto name = args[0].toString();
-                        auto category = args[1].toString();
+                        auto description = args[1].toString();
+                        auto category = args[2].toString();
                         auto preset = processor.createPreset(name, false);
+                        preset.setDescription(description);
                         auto fbp = FileBackedPreset::save(preset, category);
                         webViewManager.evaluateJavascript("window.ui.reloadPresets()");
                         processor.queuePreset(fbp, true);
