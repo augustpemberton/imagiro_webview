@@ -385,6 +385,12 @@ namespace imagiro {
                                     state.setMember("y", size.y);
                                     return state;
                                 });
+
+            webViewManager.bind("juce_openURL",
+                                [&](const choc::value::ValueView &args) -> choc::value::Value {
+                juce::URL(args[0].getWithDefault("https://imagi.ro")).launchInDefaultBrowser();
+                return {};
+            });
         }
 
     private:
