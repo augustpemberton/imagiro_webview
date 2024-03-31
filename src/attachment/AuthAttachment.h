@@ -7,8 +7,17 @@
 #include "WebUIAttachment.h"
 
 namespace imagiro {
-    class AuthAttachment : public WebUIAttachment {
-        using WebUIAttachment::WebUIAttachment;
+    class AuthAttachment : public WebUIAttachment, AuthorizationManager::Listener {
+    public:
+
+        AuthAttachment(WebProcessor& p, WebViewManager& w)
+                : WebUIAttachment(p, w) {
+            processor.getAuthManager().addListener(this);
+        }
+
+        ~AuthAttachment() override {
+            processor.getAuthManager().removeListener(this);
+        }
 
         void addBindings() override {
             webViewManager.bind( "juce_getIsAuthorized",
@@ -54,6 +63,10 @@ namespace imagiro {
                                  [&](const choc::value::ValueView &args) -> choc::value::Value {
                 return choc::value::Value {processor.getAuthManager().getSerial().toStdString()};
             });
+        }
+
+        void onAuthSuccess() override {
+            webViewManager.evaluateJavascript("window.ui.onAuthSuccess()");
         }
     };
 }
