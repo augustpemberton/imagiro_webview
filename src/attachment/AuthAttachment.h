@@ -26,6 +26,12 @@ namespace imagiro {
                                  }
             );
 
+            webViewManager.bind( "juce_getIsSerialValid",
+                                 [&](const choc::value::ValueView &args) -> choc::value::Value {
+                                     return choc::value::Value(processor.getAuthManager().isAuthorized(true));
+                                 }
+            );
+
             webViewManager.bind( "juce_getDemoStarted",
                                  [&](const choc::value::ValueView &args) -> choc::value::Value {
                                      return choc::value::Value(processor.getAuthManager().hasDemoStarted());
@@ -61,8 +67,14 @@ namespace imagiro {
 
             webViewManager.bind( "juce_getSerial",
                                  [&](const choc::value::ValueView &args) -> choc::value::Value {
-                return choc::value::Value {processor.getAuthManager().getSerial().toStdString()};
-            });
+                                     return choc::value::Value {processor.getAuthManager().getSerial().toStdString()};
+                                 });
+
+            webViewManager.bind( "juce_logOut",
+                                 [&](const choc::value::ValueView &args) -> choc::value::Value {
+                                     processor.getAuthManager().logout();
+                                     return {};
+                                 });
         }
 
         void onAuthSuccess() override {

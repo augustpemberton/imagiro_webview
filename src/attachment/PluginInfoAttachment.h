@@ -391,6 +391,15 @@ namespace imagiro {
                 juce::URL(args[0].getWithDefault("https://imagi.ro")).launchInDefaultBrowser();
                 return {};
             });
+
+            webViewManager.bind("juce_getProductSlug",
+                                [&](const choc::value::ValueView &args) -> choc::value::Value {
+                                    std::string productSlug;
+#ifdef PRODUCT_SLUG
+                                    productSlug = std::string(PRODUCT_SLUG);
+#endif
+                                    return choc::value::Value(productSlug);
+                                });
         }
 
     private:
