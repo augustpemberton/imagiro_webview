@@ -13,7 +13,7 @@
 #include "juce_audio_plugin_client/Standalone/juce_StandaloneFilterWindow.h"
 
 namespace imagiro {
-    class PluginInfoAttachment : public WebUIAttachment, public VersionManager::Listener, juce::ChangeListener,
+    class PluginInfoAttachment : public WebUIAttachment, juce::ChangeListener,
             juce::Timer {
     public:
         PluginInfoAttachment(WebProcessor& p, WebViewManager& w)
@@ -33,21 +33,11 @@ namespace imagiro {
             stopTimer();
         }
 
-        void addListeners() override {
-            processor.getVersionManager().addListener(this);
-        }
-
         ~PluginInfoAttachment() override {
-            processor.getVersionManager().removeListener(this);
-
             auto standaloneInstance = juce::StandalonePluginHolder::getInstance();
             if (standaloneInstance) {
                 standaloneInstance->deviceManager.removeChangeListener(this);
             }
-        }
-
-        void OnUpdateDiscovered() override {
-            webViewManager.evaluateJavascript("window.ui.updateDiscovered()");
         }
 
         void changeListenerCallback(juce::ChangeBroadcaster *source) override {
@@ -58,9 +48,10 @@ namespace imagiro {
             webViewManager.bind(
                 "juce_getCurrentVersion",
                 [&](const choc::value::ValueView &args) -> choc::value::Value {
-                    return choc::value::Value(processor.getVersionManager().getCurrentVersion().toStdString());
+                    return choc::value::Value(processor.getCurrentVersion().toStdString());
                 }
             );
+
             webViewManager.bind(
                 "juce_showStandaloneAudioSettings",
                 [&](const choc::value::ValueView &args) -> choc::value::Value {
@@ -310,21 +301,6 @@ namespace imagiro {
                 }
             );
 
-            webViewManager.bind(
-                "juce_getIsUpdateAvailable",
-                [&](const choc::value::ValueView &args) -> choc::value::Value {
-                    auto newVersion = processor.getVersionManager().isUpdateAvailable();
-                    if (!newVersion) return {};
-
-                    return choc::value::Value(newVersion->toStdString());
-                }
-            );
-            webViewManager.bind("juce_revealUpdate",
-                                [&](const choc::value::ValueView &args) -> choc::value::Value {
-                                    juce::URL(processor.getVersionManager().getUpdateURL()).launchInDefaultBrowser();
-                                    return {};
-                                });
-
             webViewManager.bind("juce_getIsDebug",
                                 [&](const choc::value::ValueView &args) -> choc::value::Value {
 #if JUCE_DEBUG
@@ -376,6 +352,16 @@ namespace imagiro {
                     [&](const choc::value::ValueView &args) -> choc::value::Value {
                         return choc::value::Value(uuid.toString().toStdString());
                     });
+
+
+            webViewManager.bind("juce_getIsBeta",
+                                [&](const choc::value::ValueView &args) -> choc::value::Value {
+#ifdef BETA
+                                    return choc::value::Value(true);
+#else
+                                    return choc::value::Value(false);
+#endif
+                                });
 
             webViewManager.bind("juce_getDefaultWindowSize",
                                 [&](const choc::value::ValueView &args) -> choc::value::Value {
