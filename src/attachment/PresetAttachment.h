@@ -33,7 +33,7 @@ class PresetAttachment : public WebUIAttachment, public Processor::PresetListene
                 if (defaultPresetFile.exists()) {
                     auto preset = FileBackedPreset::createFromFile(defaultPresetPath);
                     if (preset) {
-                        processor.queuePreset(preset.value(), true);
+                        processor.queuePreset(preset->getPreset(), false);
                         return;
                     }
                 }
@@ -44,7 +44,7 @@ class PresetAttachment : public WebUIAttachment, public Processor::PresetListene
                 auto presetValue = choc::json::parse(defaultPresetString.toStdString());
                 auto preset = Preset::fromState(presetValue);
                 DBG("loading default preset: " << preset.getName());
-                processor.queuePreset(preset, true);
+                processor.queuePreset(preset, false);
             }
         }
 
