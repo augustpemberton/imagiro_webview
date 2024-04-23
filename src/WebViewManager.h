@@ -41,15 +41,10 @@ namespace imagiro {
         }
 
         std::shared_ptr<choc::ui::WebView> createWebView() {
-#if JUCE_DEBUG || defined(BETA)
-            auto debugMode = true;
-#else
-            auto debugMode = false;
-#endif
             return std::make_shared<choc::ui::WebView>(
                     choc::ui::WebView::Options
                             {
-                                    debugMode, true, "",
+                                    true, true, "",
                                     [&](auto& path) {
                                         return server.getResource(path);
                                     }
@@ -59,12 +54,12 @@ namespace imagiro {
 
         static void bindEditorSpecificFunctions(choc::ui::WebView& view, juce::AudioProcessorEditor* editor) {
             view.bind( "juce_setWindowSize",
-                      wrapFn([editor](const choc::value::ValueView &args) -> choc::value::Value {
-                          auto x = args[0].getWithDefault(500);
-                          auto y = args[1].getWithDefault(400);
-                          editor->setSize(x, y);
-                          return {};
-                      })
+                       wrapFn([editor](const choc::value::ValueView &args) -> choc::value::Value {
+                           auto x = args[0].getWithDefault(500);
+                           auto y = args[1].getWithDefault(400);
+                           editor->setSize(x, y);
+                           return {};
+                       })
             );
         }
 
@@ -111,6 +106,7 @@ namespace imagiro {
         }
 
         static choc::ui::WebView::CallbackFn wrapFn(choc::ui::WebView::CallbackFn func) {
+            return func; // sampler2 compatibility
             return [func](const choc::value::ValueView& args) -> choc::value::Value {
                 auto responseState = choc::value::createObject("Response");
                 try {
