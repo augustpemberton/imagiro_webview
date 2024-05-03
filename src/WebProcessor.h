@@ -44,6 +44,8 @@ public:
     void loadPreset(Preset preset) override;
 
 protected:
+    void init();
+    bool hasInitialized {false};
     AssetServer& server;
     WebViewManager webViewManager { server };
     std::vector<std::unique_ptr<WebUIAttachment>> uiAttachments;
@@ -52,7 +54,6 @@ protected:
 
 private:
     void addUIAttachment(std::unique_ptr<WebUIAttachment> attachment);
-    void init();
 };
 
 } // namespace imagiro

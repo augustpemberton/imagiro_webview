@@ -14,7 +14,7 @@ namespace imagiro {
             : Processor(parametersYAMLString, currentVersion, productSlug),
               server(server)
     {
-        init();
+//        init();
     }
 
     WebProcessor::WebProcessor(const juce::AudioProcessor::BusesProperties &ioLayouts,
@@ -24,10 +24,12 @@ namespace imagiro {
             : Processor(ioLayouts, parametersYAMLString, currentVersion, productSlug),
               server(server)
     {
-        init();
+//        init();
     }
 
     juce::AudioProcessorEditor *WebProcessor::createEditor() {
+        jassert(hasInitialized); // make sure to call init() from the subclass constructor!
+
         juce::AudioProcessorEditor* e;
 #if JUCE_DEBUG
         e = WebUIPluginEditor::createFromURL(*this, "http://localhost:4342");
@@ -65,6 +67,7 @@ namespace imagiro {
         addUIAttachment(std::make_unique<AuthAttachment>(*this, webViewManager));
         addUIAttachment(std::make_unique<FileIOAttachment>(*this, webViewManager));
         addUIAttachment(std::make_unique<UtilAttachment>(*this, webViewManager));
+        hasInitialized = true;
     }
 
     void WebProcessor::addUIAttachment(WebUIAttachment& attachment) {

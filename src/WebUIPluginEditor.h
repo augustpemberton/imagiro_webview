@@ -8,6 +8,8 @@
 #include "WebProcessor.h"
 #include "ChocBrowserComponent.h"
 
+#include "BinaryData.h"
+
 namespace imagiro {
 class WebUIPluginEditor : public juce::AudioProcessorEditor, WebViewManager::Listener {
 public:
@@ -18,6 +20,10 @@ public:
         setSize(400, 300);
         addAndMakeVisible(browser);
         browser.getWebViewManager().addListener(this);
+
+        logo = juce::Drawable::createFromImageData(BinaryData::logo_svg, BinaryData::logo_svgSize);
+        preloadImage = juce::ImageFileFormat::loadFrom(BinaryData::startupblurred_png,
+                                                       BinaryData::startupblurred_pngSize);
     }
 
     ~WebUIPluginEditor() override {
@@ -70,11 +76,20 @@ public:
 //        debugToolbar.setBounds(b.removeFromBottom(20));
 //#endif
         browser.setBounds(b);
+
+    }
+
+    void paint(juce::Graphics &g) override {
+        g.fillAll(juce::Colour(234, 229, 219));
+        g.drawImage(preloadImage, getLocalBounds().toFloat());
     }
 
 private:
     ChocBrowserComponent browser;
     std::unique_ptr<juce::FileChooser> fileChooser;
+
+    std::unique_ptr<juce::Drawable> logo;
+    juce::Image preloadImage;
 };
 
 }

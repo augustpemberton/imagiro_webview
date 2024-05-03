@@ -127,13 +127,13 @@ void imagiro::ParameterAttachment::sendStateToBrowser(imagiro::Parameter *param)
     auto uid = param->getUID();
     auto value = param->getValue();
 
-    juce::String s = "window.ui.updateParameterState(";
+    std::string s = "window.ui.updateParameterState(";
     s += "\""  + uid + "\"";
     s += ", ";
-    s += juce::String(value);
+    s += std::to_string(value);
     s += ")";
 
-    this->webViewManager.evaluateJavascript(s.toStdString());
+    this->webViewManager.evaluateJavascript(s);
 }
 
 choc::value::Value imagiro::ParameterAttachment::getAllParameterSpecValue() {
@@ -151,7 +151,7 @@ void imagiro::ParameterAttachment::configChanged(imagiro::Parameter *param) {
 
 choc::value::Value imagiro::ParameterAttachment::getParameterSpecValue(imagiro::Parameter *param) {
     auto paramSpec = choc::value::createObject("param");
-    paramSpec.setMember("uid", param->getUID().toStdString());
+    paramSpec.setMember("uid", param->getUID());
     paramSpec.setMember("name", param->getName(100).toStdString());
     paramSpec.setMember("value01", param->getValue());
     paramSpec.setMember("defaultVal01", param->getDefaultValue());
