@@ -75,10 +75,29 @@ namespace imagiro {
                                      processor.getAuthManager().logout();
                                      return {};
                                  });
+
+            webViewManager.bind( "juce_getNumBeats",
+                                 [&](const choc::value::ValueView &args) -> choc::value::Value {
+                auto b = 2;
+#ifdef SERIAL_REMAINDER
+                b = SERIAL_REMAINDER;
+#endif
+                                     return choc::value::Value(b);
+                                 });
+
+            webViewManager.bind( "juce_getBeatClock",
+                                 [&](const choc::value::ValueView &args) -> choc::value::Value {
+                processor.getAuthManager().cancelAuth();
+                return {};
+            });
         }
 
-        void onAuthSuccess() override {
-            webViewManager.evaluateJavascript("window.ui.onAuthSuccess()");
+        void onAuthStateChanged(bool authorized) override {
+             if (authorized) {
+                 webViewManager.evaluateJavascript("window.ui.onAuthStateChanged(true)");
+             } else {
+                 webViewManager.evaluateJavascript("window.ui.onAuthStateChanged(false)");
+             }
         }
     };
 }
