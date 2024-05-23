@@ -14,7 +14,7 @@ namespace imagiro {
     class WebViewManager : juce::Timer {
     public:
         struct Listener {
-            virtual void fileOpenerRequested(juce::String patternsAllowed) {}
+            virtual void fileOpenerRequested(juce::String patternsAllowed, bool createNewFile) {}
         };
 
         void addListener(Listener* l) {listeners.add(l);}
@@ -122,8 +122,8 @@ namespace imagiro {
             };
         }
 
-        void requestFileChooser(juce::String patternsAllowed = "*.wav") {
-            listeners.call(&Listener::fileOpenerRequested, patternsAllowed);
+        void requestFileChooser(juce::String patternsAllowed = "*.wav", bool createNewFile = false) {
+            listeners.call(&Listener::fileOpenerRequested, patternsAllowed, createNewFile);
         }
 
         void removeWebView(choc::ui::WebView* v) {

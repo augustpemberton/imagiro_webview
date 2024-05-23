@@ -24,7 +24,7 @@ public:
         browser.getWebViewManager().removeListener(this);
     }
 
-    void fileOpenerRequested(juce::String patternsAllowed) override {
+    void fileOpenerRequested(juce::String patternsAllowed, bool createNewFile = false) override {
         fileChooser = std::make_unique<juce::FileChooser>(
                 "please choose a file",
                 juce::File::getSpecialLocation(juce::File::userHomeDirectory),
@@ -34,6 +34,8 @@ public:
         auto folderChooserFlags = juce::FileBrowserComponent::openMode
                                   | juce::FileBrowserComponent::canSelectFiles
                                   | juce::FileBrowserComponent::canSelectMultipleItems;
+
+        if (createNewFile) folderChooserFlags = juce::FileBrowserComponent::FileChooserFlags::saveMode;
 
         fileChooser->launchAsync (folderChooserFlags, [this] (const juce::FileChooser& chooser) {
             auto results = chooser.getResults();

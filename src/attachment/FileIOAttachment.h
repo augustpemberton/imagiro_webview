@@ -25,7 +25,9 @@ namespace imagiro {
 
             webViewManager.bind("juce_requestFileChooser",
             [&](const choc::value::ValueView& args) -> choc::value::Value {
-                webViewManager.requestFileChooser(args[0].toString());
+                bool saveMode = false;
+                if (args.size() > 1) saveMode = args[1].getWithDefault(false);
+                webViewManager.requestFileChooser(args[0].toString(), saveMode);
                 return {};
             });
 
