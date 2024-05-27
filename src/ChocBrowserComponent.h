@@ -77,10 +77,10 @@ namespace imagiro {
         WebViewManager &webViewManager;
         std::shared_ptr<choc::ui::WebView> webView;
 
-        juce::VBlankAttachment vBlankAttachment { this, [this] { update(); } };
+        juce::VBlankAttachment vBlankAttachment { this, [&] { update(); } };
 
-        juce::int64 fadeStartTime;
-        bool fading;
+        juce::int64 fadeStartTime{};
+        bool fading{};
         const int fadeMS = 70;
 
 #if JUCE_WINDOWS
