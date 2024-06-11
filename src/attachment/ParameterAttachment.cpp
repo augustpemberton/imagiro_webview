@@ -91,7 +91,7 @@ void imagiro::ParameterAttachment::addBindings() {
             });
 
     webViewManager.bind(
-            "juce_textToValue",
+            "juce_textToValue01",
             [&](const choc::value::ValueView &args) -> choc::value::Value {
                 auto paramID = juce::String(args[0].toString());
                 auto displayValue = juce::String(args[1].toString());
@@ -99,7 +99,8 @@ void imagiro::ParameterAttachment::addBindings() {
                 if (!param) return {};
 
                 auto val = param->getConfig()->valueFunction(*param, displayValue);
-                return choc::value::Value(val);
+                auto val01 = param->convertTo0to1(val);
+                return choc::value::Value(val01);
             });
 
     webViewManager.bind(
@@ -112,6 +113,21 @@ void imagiro::ParameterAttachment::addBindings() {
 
                 auto val = param->getConfig()->valueFunction(*param, displayValue);
                 param->setUserValueAsUserAction(val);
+
+                return {};
+            }
+    );
+
+    webViewManager.bind(
+            "juce_setConfig",
+            [&](const choc::value::ValueView &args) -> choc::value::Value {
+                auto paramID = juce::String(args[0].toString());
+                auto configIndex = args[1].getWithDefault(0);
+
+                auto param = processor.getParameter(paramID);
+                if (!param) return {};
+
+                param->setConfig(configIndex);
 
                 return {};
             }
@@ -156,21 +172,24 @@ choc::value::Value imagiro::ParameterAttachment::getParameterSpecValue(imagiro::
     paramSpec.setMember("value01", param->getValue());
     paramSpec.setMember("defaultVal01", param->getDefaultValue());
     paramSpec.setMember("locked", param->isLocked());
+    paramSpec.setMember("configIndex", param->getConfigIndex());
 
-    // Convert std::vector<std::string> to choc::value::Value
-    auto choicesArray = choc::value::createEmptyArray();
-    for (const auto& choice : param->getConfig()->choices) {
-        choicesArray.addArrayElement(choc::value::Value(choice));
+    auto configsArray = choc::value::createEmptyArray();
+    for (const auto& config : param->configs) {
+        auto configObject = choc::value::createObject("ParamConfig");
+        configObject.setMember("name", config.name);
+
+        // Convert std::vector<std::string> to choc::value::Value
+        auto choicesArray = choc::value::createEmptyArray();
+        for (const auto& choice : param->getConfig()->choices) {
+            choicesArray.addArrayElement(choc::value::Value(choice));
+        }
+        configObject.setMember("choices", choicesArray);
+
+        configsArray.addArrayElement(configObject);
     }
-    paramSpec.setMember("choices", choicesArray);
 
-    auto range = choc::value::createObject("range");
-    range.setMember("min", param->getNormalisableRange().start);
-    range.setMember("max", param->getNormalisableRange().end);
-    jassert(!std::isinf(param->getNormalisableRange().interval));
-    range.setMember("step", param->getNormalisableRange().interval);
-    range.setMember("skew", param->getNormalisableRange().skew);
+    paramSpec.setMember("configs", configsArray);
 
-    paramSpec.setMember("range", range);
     return paramSpec;
 }
