@@ -58,6 +58,14 @@ namespace imagiro {
         }
 
         static void bindEditorSpecificFunctions(choc::ui::WebView& view, juce::AudioProcessorEditor* editor) {
+            view.bind( "juce_getWindowSize",
+                       wrapFn([editor](const choc::value::ValueView &args) -> choc::value::Value {
+                           auto dims = choc::value::createObject("WindowSize");
+                           dims.setMember("width", editor->getWidth());
+                           dims.setMember("height", editor->getHeight());
+                           return dims;
+                       })
+            );
             view.bind( "juce_setWindowSize",
                       wrapFn([editor](const choc::value::ValueView &args) -> choc::value::Value {
                           auto x = args[0].getWithDefault(500);

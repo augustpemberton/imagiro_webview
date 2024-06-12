@@ -38,6 +38,9 @@ namespace imagiro {
 #endif
 
         auto defaultSize = getDefaultWindowSize();
+#if JUCE_DEBUG
+        if (wrapperType == wrapperType_Standalone) defaultSize.y += 30;
+#endif
         e->setSize(defaultSize.x, defaultSize.y);
         if (isResizable() != ResizeType::NonResizable) {
             e->setResizable(true, true);

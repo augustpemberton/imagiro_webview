@@ -135,6 +135,15 @@ namespace imagiro {
                                     );
                                 }
             );
+
+            webViewManager.bind("juce_setDefaultBPM", [&](const choc::value::ValueView& args) -> choc::value::Value {
+                const auto defaultBPM = args[0].getWithDefault(120);
+                processor.setDefaultBPM(defaultBPM);
+                return {};
+            });
+            webViewManager.bind("juce_getDefaultBPM", [&](const choc::value::ValueView& args) -> choc::value::Value {
+                return choc::value::Value(processor.getDefaultBPM());
+            });
         }
 
     };
