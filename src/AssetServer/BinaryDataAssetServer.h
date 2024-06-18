@@ -8,14 +8,14 @@
 #include "AssetServer.h"
 
 using choc::ui::WebView;
-using GetResource = std::function<const char*(const char*, int&)>;
-using GetResourceOriginalFilename = std::function<const char*(const char*)>;
+using GetResourceFn = std::function<const char*(const char*, int&)>;
+using GetResourceOriginalFilenameFn = std::function<const char*(const char*)>;
 
 namespace imagiro {
     class BinaryDataAssetServer : public AssetServer {
     public:
-        explicit BinaryDataAssetServer(GetResource getNamedResourceLambda,
-                                       GetResourceOriginalFilename getNamedResourceOriginalFilenameLambda)
+        explicit BinaryDataAssetServer(GetResourceFn getNamedResourceLambda,
+                                       GetResourceOriginalFilenameFn getNamedResourceOriginalFilenameLambda)
                 : getNamedResource(getNamedResourceLambda),
                   getNamedResourceOriginalFilename(getNamedResourceOriginalFilenameLambda) {}
 
@@ -113,7 +113,7 @@ namespace imagiro {
 
     private:
 
-        GetResource getNamedResource;
-        GetResourceOriginalFilename getNamedResourceOriginalFilename;
+        GetResourceFn getNamedResource;
+        GetResourceOriginalFilenameFn getNamedResourceOriginalFilename;
     };
 } // namespace imagiro
