@@ -23,6 +23,26 @@ imagiro::ParameterAttachment::~ParameterAttachment() {
 
 void imagiro::ParameterAttachment::addBindings() {
     webViewManager.bind(
+            "juce_incrementPluginParameter",
+            [&](const choc::value::ValueView &args) -> choc::value::Value {
+                auto paramID = args[0].getWithDefault("");
+                auto numSteps = args[1].getWithDefault(1);
+
+                auto param = processor.getParameter(paramID);
+
+                if (param) {
+                    auto v = param->getUserValue();
+                    if (v >= param->getNormalisableRange().getRange().getEnd()) {
+                        v = param->getNormalisableRange().getRange().getStart();
+                    } else {
+                        v += param->getNormalisableRange().interval * numSteps;
+                    }
+                    param->setUserValueAndNotifyHost(v);
+                }
+
+                return choc::value::Value(param->getValue());
+            });
+    webViewManager.bind(
             "juce_updatePluginParameter",
             [&](const choc::value::ValueView &args) -> choc::value::Value {
                 auto paramID = args[0].getWithDefault("");
@@ -76,7 +96,8 @@ void imagiro::ParameterAttachment::addBindings() {
                 auto param = processor.getParameter(args[0].toString());
                 if (!param) return {};
 
-                return choc::value::Value(param->getUserValue());
+                auto uv = param->getUserValue();
+                return choc::value::Value(uv);
             });
 
     webViewManager.bind(
