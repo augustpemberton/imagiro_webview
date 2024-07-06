@@ -144,6 +144,26 @@ namespace imagiro {
             webViewManager.bind("juce_getDefaultBPM", [&](const choc::value::ValueView& args) -> choc::value::Value {
                 return choc::value::Value(processor.getDefaultBPM());
             });
+
+            webViewManager.bind("juce_emitSignal", [&](const choc::value::ValueView& args) -> choc::value::Value {
+                auto signalName = std::string(args[0].getWithDefault(""));
+
+                std::string signalArgs;
+                if (args.size() > 1) {
+                    signalArgs = choc::json::toString(args[1]);
+                }
+
+                std::string evalString = "window.ui.onSignal('" + signalName + "'";
+
+                if (!signalArgs.empty()) {
+                    evalString += ", " + signalArgs;
+                }
+
+                evalString += ")";
+
+                webViewManager.evaluateJavascript(evalString);
+                return {};
+            });
         }
 
     };
