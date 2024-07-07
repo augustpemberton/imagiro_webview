@@ -4,6 +4,7 @@
 
 #pragma once
 #include "WebUIAttachment.h"
+#include "WebviewData.h"
 
 namespace imagiro {
     class UtilAttachment : public WebUIAttachment {
@@ -50,8 +51,9 @@ namespace imagiro {
                         auto key = std::string(args[0].getWithDefault(""));
                         if (key.empty()) return {};
                         auto value = std::string(args[1].getWithDefault(""));
+                        auto saveInPreset = args[2].getWithDefault(false);
 
-                        processor.getWebViewData().setMember(key, value);
+                        processor.getWebViewData().set(key, value, saveInPreset);
 
                         std::string js = "window.ui.processorValueUpdated(";
                         js += "'"; js += key; js += "',";
@@ -65,8 +67,9 @@ namespace imagiro {
                         auto key = std::string(args[0].getWithDefault(""));
                         if (key.empty()) return {};
 
-                        if (!processor.getWebViewData().hasObjectMember(key)) return {};
-                        return choc::value::Value(processor.getWebViewData()[key]);
+                        auto val = processor.getWebViewData().get(key);
+                        if (!val) return {};
+                        return choc::value::Value(*val);
                     });
 
             webViewManager.bind(

@@ -6,6 +6,7 @@
 #include "choc/gui/choc_WebView.h"
 #include <utility>
 #include "AssetServer.h"
+#include <imagiro_processor/imagiro_processor.h>
 
 using choc::ui::WebView;
 using GetResourceFn = std::function<const char*(const char*, int&)>;
@@ -27,6 +28,22 @@ namespace imagiro {
             std::string path = p;
             if (path == "/") {
                 path = "index.html";
+            }
+
+            if (path.starts_with("/$RES/")) {
+                auto relPath = juce::String(path).replace("/$RES/", "");
+                auto file = Resources::getSystemDataFolder().getChildFile("resources")
+                                                                 .getChildFile(relPath);
+                if (!file.exists()) {
+                    return {};
+                }
+
+                juce::MemoryBlock fileData;
+                file.loadFileAsData(fileData);
+
+                return toResource((char*) fileData.getData(),
+                                  file.getSize(),
+                                  getMimeType(file.getFileExtension().toStdString()));
             }
 
             auto resourceName = juce::String(path)
@@ -89,7 +106,7 @@ namespace imagiro {
             return "application/octet-stream";
         }
 
-        WebView::Options::Resource toResource(const char* data, int size, const std::string& mimeType) {
+        WebView::Options::Resource toResource(const char* data, unsigned int size, const std::string& mimeType) {
             std::vector<uint8_t> d;
             std::string contentRange;
 

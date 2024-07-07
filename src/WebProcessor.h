@@ -7,6 +7,7 @@
 #include <imagiro_processor/imagiro_processor.h>
 #include "WebViewManager.h"
 #include "imagiro_webview/src/AssetServer/BinaryDataAssetServer.h"
+#include "imagiro_webview/src/attachment/WebviewData.h"
 #include <memory>
 
 namespace imagiro {
@@ -38,7 +39,7 @@ public:
 
     void addUIAttachment(WebUIAttachment& attachment);
 
-    choc::value::Value& getWebViewData() { return webViewCustomData; }
+    WebviewData& getWebViewData() { return webViewCustomData; }
 
     Preset createPreset(const juce::String &name, bool isDAWSaveState) override;
     void loadPreset(Preset preset) override;
@@ -50,7 +51,7 @@ protected:
     WebViewManager webViewManager { server };
     std::vector<std::unique_ptr<WebUIAttachment>> uiAttachments;
 
-    choc::value::Value webViewCustomData {choc::value::createObject("CustomData")};
+     WebviewData webViewCustomData;
 
 private:
     void addUIAttachment(std::unique_ptr<WebUIAttachment> attachment);

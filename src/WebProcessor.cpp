@@ -86,16 +86,22 @@ namespace imagiro {
 
     Preset WebProcessor::createPreset(const juce::String &name, bool isDAWSaveState) {
         auto p = Processor::createPreset(name, isDAWSaveState);
-        if (isDAWSaveState) {
-            p.getData().addMember("webviewData", getWebViewData());
-        }
+        p.getData().addMember("webviewData", getWebViewData().getState(!isDAWSaveState));
         return p;
     }
 
     void WebProcessor::loadPreset(Preset preset) {
         Processor::loadPreset(preset);
-        if (preset.isDAWSaveState() && preset.getData().hasObjectMember("webviewData")) {
-            webViewCustomData = preset.getData()["webviewData"];
+        if (preset.getData().hasObjectMember("webviewData")) {
+            webViewCustomData = WebviewData::fromState(preset.getData()["webviewData"],
+                                                       !preset.isDAWSaveState());
+
+            for (auto& [key, val] : webViewCustomData.getValues()) {
+                std::string js = "window.ui.processorValueUpdated(";
+                js += "'"; js += key; js += "',";
+                js += "'"; js += val.value; js += "');";
+                webViewManager.evaluateJavascript(js);
+            }
         }
     }
 }
