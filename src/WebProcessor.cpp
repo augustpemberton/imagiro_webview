@@ -27,20 +27,18 @@ namespace imagiro {
 //        init();
     }
 
-    juce::AudioProcessorEditor *WebProcessor::createEditor() {
-        jassert(hasInitialized); // make sure to call init() from the subclass constructor!
-
-        juce::AudioProcessorEditor* e;
+    void WebProcessor::wrapEditor(WebUIPluginEditor* e) {
 #if JUCE_DEBUG
-        e = WebUIPluginEditor::createFromURL(*this, "http://localhost:4342");
-#else
-        e = WebUIPluginEditor::create(*this);
+        e->getBrowser().getWebViewManager().navigate("http://localhost:4342");
 #endif
 
         auto defaultSize = getDefaultWindowSize();
+
 #if JUCE_DEBUG
+        // add space for standalone debug bar
         if (wrapperType == wrapperType_Standalone) defaultSize.y += 30;
 #endif
+
         e->setSize(defaultSize.x, defaultSize.y);
         if (isResizable() != ResizeType::NonResizable) {
             e->setResizable(true, true);
@@ -59,7 +57,13 @@ namespace imagiro {
                 w->setUsingNativeTitleBar(true);
             }
         }
+    }
 
+    juce::AudioProcessorEditor *WebProcessor::createEditor() {
+        jassert(hasInitialized); // make sure to call init() from the subclass constructor!
+
+        auto e = new WebUIPluginEditor(*this);
+        wrapEditor(e);
         return e;
     }
 

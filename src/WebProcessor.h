@@ -53,6 +53,8 @@ protected:
 
      WebviewData webViewCustomData;
 
+     void wrapEditor(WebUIPluginEditor* e);
+
 private:
     void addUIAttachment(std::unique_ptr<WebUIAttachment> attachment);
 };

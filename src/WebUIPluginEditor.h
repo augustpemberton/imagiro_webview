@@ -11,7 +11,7 @@
 namespace imagiro {
 class WebUIPluginEditor : public juce::AudioProcessorEditor, WebViewManager::Listener {
 public:
-    WebUIPluginEditor(WebProcessor& p)
+    WebUIPluginEditor(WebProcessor& p, const juce::String& url = "")
             : juce::AudioProcessorEditor(p),
               browser(*this, p.getWebViewManager())
     {
@@ -53,26 +53,16 @@ public:
         return editor;
     }
 
-    static WebUIPluginEditor* create(WebProcessor& p) {
-        auto editor = new WebUIPluginEditor(p);
-        return editor;
-    }
-
-    static WebUIPluginEditor* createFromURL(WebProcessor& p, const juce::String& url) {
-        auto editor = new WebUIPluginEditor(p);
-        editor->browser.getWebViewManager().navigate(url.toStdString());
-        return editor;
-    }
-
     void resized() override {
         auto b = getLocalBounds();
         browser.setBounds(b);
-
     }
 
     void paint(juce::Graphics &g) override {
         g.fillAll(juce::Colour(234, 229, 219));
     }
+
+    ChocBrowserComponent& getBrowser() { return browser; }
 
 private:
     ChocBrowserComponent browser;
