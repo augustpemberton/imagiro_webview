@@ -16,8 +16,12 @@ struct WebviewDataValue {
 
     static WebviewDataValue fromState(choc::value::ValueView v, bool isPreset) {
         WebviewDataValue val;
-        val.value = v["value"].getWithDefault("");
-        val.saveInPreset = isPreset;
+        if (v.isString()) {
+            val.value = v.getWithDefault("");
+        } else if (v.isObject() && v.hasObjectMember("value")) {
+            val.value = v["value"].getWithDefault("");
+            val.saveInPreset = isPreset;
+        }
         return val;
     }
 };
