@@ -9,6 +9,7 @@
 #include "imagiro_webview/src/AssetServer/BinaryDataAssetServer.h"
 #include "imagiro_webview/src/attachment/WebviewData.h"
 #include <memory>
+#include "BackgroundTaskRunner.h"
 
 namespace imagiro {
 class WebUIPluginEditor;
@@ -44,6 +45,8 @@ public:
     Preset createPreset(const juce::String &name, bool isDAWSaveState) override;
     void loadPreset(Preset preset) override;
 
+    BackgroundTaskRunner& getBackgroundTaskRunner() { return backgroundTaskRunner; }
+
 protected:
     void init();
     bool hasInitialized {false};
@@ -54,6 +57,8 @@ protected:
      WebviewData webViewCustomData;
 
      void wrapEditor(WebUIPluginEditor* e);
+
+     BackgroundTaskRunner backgroundTaskRunner;
 
 private:
     void addUIAttachment(std::unique_ptr<WebUIAttachment> attachment);

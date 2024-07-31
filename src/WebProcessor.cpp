@@ -12,7 +12,8 @@ namespace imagiro {
 
     WebProcessor::WebProcessor(AssetServer& server, juce::String parametersYAMLString, juce::String currentVersion, juce::String productSlug)
             : Processor(parametersYAMLString, currentVersion, productSlug),
-              server(server)
+              server(server),
+              backgroundTaskRunner(webViewManager)
     {
 //        init();
     }
@@ -22,7 +23,8 @@ namespace imagiro {
                                juce::String parametersYAMLString,
                                juce::String currentVersion, juce::String productSlug)
             : Processor(ioLayouts, parametersYAMLString, currentVersion, productSlug),
-              server(server)
+              server(server),
+              backgroundTaskRunner(webViewManager)
     {
 //        init();
     }
