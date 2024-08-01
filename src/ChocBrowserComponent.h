@@ -22,7 +22,7 @@ namespace imagiro {
 #endif
     {
     public:
-        ChocBrowserComponent(juce::AudioProcessorEditor& editor, WebViewManager &w) : webViewManager(w) {
+        ChocBrowserComponent(WebUIPluginEditor& editor, WebViewManager &w) : webViewManager(w) {
             webView = webViewManager.getWebView(&editor);
 
             webView->bind( "juce_setUILoaded",

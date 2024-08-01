@@ -35,6 +35,7 @@ namespace imagiro {
 #endif
 
         auto defaultSize = getDefaultWindowSize();
+        defaultSize *= e->getWindowsTextScaleFactor();
 
 #if JUCE_DEBUG
         // add space for standalone debug bar

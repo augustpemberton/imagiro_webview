@@ -8,6 +8,9 @@
 #include "WebProcessor.h"
 #include "ChocBrowserComponent.h"
 
+#include <windows.h>
+#include <winrt/Windows.UI.ViewManagement.h>
+
 namespace imagiro {
 class WebUIPluginEditor : public juce::AudioProcessorEditor, WebViewManager::Listener {
 public:
@@ -63,6 +66,20 @@ public:
     }
 
     ChocBrowserComponent& getBrowser() { return browser; }
+
+    void setSizeScaled(int width, int height) {
+        auto scale = getWindowsTextScaleFactor();
+        setSize(width * scale, height * scale);
+    }
+
+    float getWindowsTextScaleFactor()
+    {
+#if JUCE_WINDOWS
+        winrt::Windows::UI::ViewManagement::UISettings settings;
+        return settings.TextScaleFactor();
+#endif
+        return 1.0f; // Default to 1.0 if we couldn't get the scale factor
+    }
 
 private:
     ChocBrowserComponent browser;
