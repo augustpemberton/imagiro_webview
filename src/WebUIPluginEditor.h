@@ -8,8 +8,10 @@
 #include "WebProcessor.h"
 #include "ChocBrowserComponent.h"
 
+#if JUCE_WINDOWS
 #include <windows.h>
 #include <winrt/Windows.UI.ViewManagement.h>
+#endif
 
 namespace imagiro {
 class WebUIPluginEditor : public juce::AudioProcessorEditor, WebViewManager::Listener {
