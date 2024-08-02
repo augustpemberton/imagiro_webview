@@ -27,7 +27,7 @@ namespace imagiro {
 
             webView->bind( "juce_setUILoaded",
                            ([&](const choc::value::ValueView &args) -> choc::value::Value {
-                               if (fading || getAlpha() > 0.f) return {};
+                               if (fading || getAlpha() > 0.02f) return {};
                                auto fade = args[0].getWithDefault(false);
                                if (fade) startFadeIn();
                                else {
@@ -44,7 +44,7 @@ namespace imagiro {
 #endif
 
             setOpaque(false);
-            setAlpha(0.f);
+            setAlpha(0.01f);
             webView->evaluateJavascript("window.ui.onUIOpened();");
         }
 
