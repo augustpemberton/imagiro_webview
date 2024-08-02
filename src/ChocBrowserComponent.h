@@ -27,6 +27,7 @@ namespace imagiro {
 
             webView->bind( "juce_setUILoaded",
                            ([&](const choc::value::ValueView &args) -> choc::value::Value {
+                               if (fading || getAlpha() > 0.f) return {};
                                auto fade = args[0].getWithDefault(false);
                                if (fade) startFadeIn();
                                else {
@@ -81,7 +82,7 @@ namespace imagiro {
 
         juce::int64 fadeStartTime{};
         bool fading{};
-        const int fadeMS = 70;
+        const int fadeMS = 120;
 
 #if JUCE_WINDOWS
         std::unique_ptr<WinKeypressWorkaround> wKW;
