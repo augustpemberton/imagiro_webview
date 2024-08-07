@@ -20,7 +20,6 @@ public:
             : juce::AudioProcessorEditor(p),
               browser(*this, p.getWebViewManager())
     {
-        setSize(400, 300);
         addAndMakeVisible(browser);
         browser.getWebViewManager().addListener(this);
     }
@@ -61,6 +60,10 @@ public:
     void resized() override {
         auto b = getLocalBounds();
         browser.setBounds(b);
+
+        resources->getConfigFile()->setValue("defaultWidth", b.getWidth());
+        resources->getConfigFile()->setValue("defaultHeight", b.getHeight());
+        resources->getConfigFile()->save();
     }
 
     void paint(juce::Graphics &g) override {
@@ -86,6 +89,7 @@ public:
 private:
     ChocBrowserComponent browser;
     std::unique_ptr<juce::FileChooser> fileChooser;
+    juce::SharedResourcePointer<Resources> resources;
 };
 
 }

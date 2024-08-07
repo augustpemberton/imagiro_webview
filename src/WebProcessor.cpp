@@ -35,14 +35,21 @@ namespace imagiro {
 #endif
 
         auto defaultSize = getDefaultWindowSize();
-        defaultSize *= e->getWindowsTextScaleFactor();
 
 #if JUCE_DEBUG
         // add space for standalone debug bar
         if (wrapperType == wrapperType_Standalone) defaultSize.y += 30;
 #endif
 
-        e->setSize(defaultSize.x, defaultSize.y);
+        auto size = defaultSize;
+
+        auto& configFile = resources->getConfigFile();
+        if (configFile->containsKey("defaultWidth")) size.x = configFile->getIntValue("defaultWidth");
+        if (configFile->containsKey("defaultHeight")) size.y = configFile->getIntValue("defaultHeight");
+
+        size *= e->getWindowsTextScaleFactor();
+
+        e->setSize(size.x, size.y);
         if (isResizable() != ResizeType::NonResizable) {
             e->setResizable(true, true);
             e->setResizeLimits(getResizeMin().x, getResizeMin().y,
