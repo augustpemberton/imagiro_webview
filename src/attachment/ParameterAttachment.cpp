@@ -26,16 +26,32 @@ void imagiro::ParameterAttachment::addBindings() {
             "juce_incrementPluginParameter",
             [&](const choc::value::ValueView &args) -> choc::value::Value {
                 auto paramID = args[0].getWithDefault("");
-                auto numSteps = args[1].getWithDefault(1);
+                auto numSteps = args[1].getWithDefault(1.f);
+
+                auto loop = false;
+                if (args.size() > 2) loop = args[2].getWithDefault(false);
 
                 auto param = processor.getParameter(paramID);
 
                 if (param) {
                     auto v = param->getUserValue();
-                    if (v >= param->getNormalisableRange().getRange().getEnd()) {
+                    if (v >= param->getNormalisableRange().getRange().getEnd() && loop) {
                         v = param->getNormalisableRange().getRange().getStart();
                     } else {
-                        v += param->getNormalisableRange().interval * numSteps;
+                        auto positive = numSteps > 0;
+                        auto interval = param->getNormalisableRange().interval;
+
+                        auto currentVal01 = param->getValue();
+
+                        auto minIncrementPercent = 0.01;
+
+                        auto minVal01 = currentVal01 + (positive ? minIncrementPercent : -minIncrementPercent);
+                        minVal01 = std::clamp((float)minVal01, 0.f, 1.f);
+                        auto minVal = param->getNormalisableRange().convertFrom0to1(minVal01);
+
+                        auto val = v + (interval * numSteps);
+
+                        v = (positive ? std::max(val, minVal) : std::min(val, minVal));
                     }
                     param->setUserValueAndNotifyHost(v);
                 }
