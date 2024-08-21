@@ -17,35 +17,11 @@ class PresetAttachment : public WebUIAttachment, public Processor::PresetListene
         {
             watcher.addFolder(resources->getPresetsFolder());
             watcher.addListener(this);
-
-            loadDefaultPreset();
         }
 
         ~PresetAttachment() override {
             watcher.removeListener(this);
             processor.removePresetListener(this);
-        }
-
-        void loadDefaultPreset() {
-            auto defaultPresetPath = resources->getConfigFile()->getValue("defaultPresetPath", "");
-            if (!defaultPresetPath.isEmpty()) {
-                auto defaultPresetFile = juce::File(defaultPresetPath);
-                if (defaultPresetFile.exists()) {
-                    auto preset = FileBackedPreset::createFromFile(defaultPresetPath);
-                    if (preset) {
-                        processor.queuePreset(preset->getPreset(), false);
-                        return;
-                    }
-                }
-            }
-
-            auto defaultPresetString = resources->getConfigFile()->getValue("defaultPresetState", "");
-            if (!defaultPresetString.isEmpty()) {
-                auto presetValue = choc::json::parse(defaultPresetString.toStdString());
-                auto preset = Preset::fromState(presetValue);
-                DBG("loading default preset: " << preset.getName());
-                processor.queuePreset(preset, false);
-            }
         }
 
         std::mutex fileActionMutex;
