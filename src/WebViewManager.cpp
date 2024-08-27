@@ -58,6 +58,12 @@ namespace imagiro {
                       return {};
                   })
         );
+        view.bind("juce_openURLInDefaultBrowser",
+                  wrapFn([editor](const choc::value::ValueView &args) -> choc::value::Value {
+                      auto url = args[0].getWithDefault("https://imagi.ro");
+                      return choc::value::Value(juce::URL(url).launchInDefaultBrowser());
+                  })
+        );
     }
 
     void WebViewManager::navigate(const std::string &url) {
