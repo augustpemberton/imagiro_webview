@@ -5,3 +5,4 @@
 #include "src/WebProcessor.h"
 #include "src/attachment/WebUIAttachment.h"
 #include "src/BackgroundTaskRunner.h"
+#include "src/attachment/AuthAttachment.h"

@@ -4,7 +4,6 @@
 #include "imagiro_webview/src/attachment/ParameterAttachment.h"
 #include "imagiro_webview/src/attachment/PresetAttachment.h"
 #include "imagiro_webview/src/attachment/PluginInfoAttachment.h"
-#include "imagiro_webview/src/attachment/AuthAttachment.h"
 #include "imagiro_webview/src/attachment/FileIOAttachment.h"
 #include "imagiro_webview/src/attachment/UtilAttachment.h"
 
@@ -81,7 +80,6 @@ namespace imagiro {
         addUIAttachment(std::make_unique<ParameterAttachment>(*this, webViewManager));
         addUIAttachment(std::make_unique<PresetAttachment>(*this, webViewManager));
         addUIAttachment(std::make_unique<PluginInfoAttachment>(*this, webViewManager));
-        addUIAttachment(std::make_unique<AuthAttachment>(*this, webViewManager));
         addUIAttachment(std::make_unique<FileIOAttachment>(*this, webViewManager));
         addUIAttachment(std::make_unique<UtilAttachment>(*this, webViewManager));
         hasInitialized = true;

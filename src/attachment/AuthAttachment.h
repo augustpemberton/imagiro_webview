@@ -10,49 +10,49 @@ namespace imagiro {
     class AuthAttachment : public WebUIAttachment, AuthorizationManager::Listener {
     public:
 
-        AuthAttachment(WebProcessor& p, WebViewManager& w)
-                : WebUIAttachment(p, w) {
-            processor.getAuthManager().addListener(this);
+        AuthAttachment(WebProcessor& p, AuthorizationManager& a)
+                : WebUIAttachment(p, p.getWebViewManager()), authManager(a) {
+            authManager.addListener(this);
         }
 
         ~AuthAttachment() override {
-            processor.getAuthManager().removeListener(this);
+            authManager.removeListener(this);
         }
 
         void addBindings() override {
             webViewManager.bind( "juce_getIsAuthorized",
                                  [&](const choc::value::ValueView &args) -> choc::value::Value {
-                                     return choc::value::Value(processor.getAuthManager().isAuthorized());
+                                     return choc::value::Value(authManager.isAuthorized());
                                  }
             );
 
             webViewManager.bind( "juce_getIsSerialValid",
                                  [&](const choc::value::ValueView &args) -> choc::value::Value {
-                                     return choc::value::Value(processor.getAuthManager().isAuthorized(true));
+                                     return choc::value::Value(authManager.isAuthorized(true));
                                  }
             );
 
             webViewManager.bind( "juce_getDemoStarted",
                                  [&](const choc::value::ValueView &args) -> choc::value::Value {
-                                     return choc::value::Value(processor.getAuthManager().hasDemoStarted());
+                                     return choc::value::Value(authManager.hasDemoStarted());
                                  }
             );
 
             webViewManager.bind( "juce_getDemoFinished",
                                  [&](const choc::value::ValueView &args) -> choc::value::Value {
-                                     return choc::value::Value(processor.getAuthManager().hasDemoFinished());
+                                     return choc::value::Value(authManager.hasDemoFinished());
                                  }
             );
 
             webViewManager.bind( "juce_getDemoTimeLeftSeconds",
                                  [&](const choc::value::ValueView &args) -> choc::value::Value {
-                                     return choc::value::Value(processor.getAuthManager().getDemoTimeLeft().inSeconds());
+                                     return choc::value::Value(authManager.getDemoTimeLeft().inSeconds());
                                  }
             );
 
             webViewManager.bind( "juce_startDemo",
                                  [&](const choc::value::ValueView &args) -> choc::value::Value {
-                                     processor.getAuthManager().startDemo();
+                                     authManager.startDemo();
                                      return {};
                                  }
             );
@@ -60,19 +60,19 @@ namespace imagiro {
             webViewManager.bind( "juce_tryAuthorize",
                                  [&](const choc::value::ValueView &args) -> choc::value::Value {
                                      auto serial = args[0].toString();
-                                     auto success = processor.getAuthManager().tryAuth(serial);
+                                     auto success = authManager.tryAuth(serial);
                                      return choc::value::createBool(success);
                                  }
             );
 
             webViewManager.bind( "juce_getSerial",
                                  [&](const choc::value::ValueView &args) -> choc::value::Value {
-                                     return choc::value::Value {processor.getAuthManager().getSerial().toStdString()};
+                                     return choc::value::Value {authManager.getSerial().toStdString()};
                                  });
 
             webViewManager.bind( "juce_logOut",
                                  [&](const choc::value::ValueView &args) -> choc::value::Value {
-                                     processor.getAuthManager().logout();
+                                     authManager.logout();
                                      return {};
                                  });
 
@@ -87,7 +87,7 @@ namespace imagiro {
 
             webViewManager.bind( "juce_getBeatClock",
                                  [&](const choc::value::ValueView &args) -> choc::value::Value {
-                processor.getAuthManager().cancelAuth();
+                authManager.cancelAuth();
                 return {};
             });
         }
@@ -99,5 +99,7 @@ namespace imagiro {
                  webViewManager.evaluateJavascript("window.ui.onAuthStateChanged(false)");
              }
         }
+
+        AuthorizationManager& authManager;
     };
 }
