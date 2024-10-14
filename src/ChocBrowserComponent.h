@@ -6,7 +6,8 @@
 
 #include "WebViewManager.h"
 //#include <juce_gui_extra/juce_gui_extra.h> // this causes some compilation issues on windows, not needed
-
+#include "juce_gui_extra/embedding/juce_NSViewComponent.h"
+#include "juce_gui_extra/embedding/juce_HWNDComponent.h"
 #if JUCE_WINDOWS
 #include "WinKeypressWorkaround.h"
 #endif
