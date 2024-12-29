@@ -289,6 +289,8 @@ namespace imagiro {
                             wrapperTypeString = "VST3";
                         else if (processor.wrapperType == juce::AudioProcessor::wrapperType_VST)
                             wrapperTypeString = "VST2";
+                        else if (processor.wrapperType == juce::AudioProcessor::wrapperType_AAX)
+                            wrapperTypeString = "AAX";
 
                         return choc::value::Value(wrapperTypeString);
                     }
