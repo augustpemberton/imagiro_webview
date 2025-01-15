@@ -7,6 +7,7 @@
 #include <choc/gui/choc_WebView.h>
 #include "WebProcessor.h"
 #include "ChocBrowserComponent.h"
+#include "WebviewBrowserComponent.h"
 
 #if JUCE_WINDOWS
 #include <windows.h>
@@ -17,15 +18,16 @@ namespace imagiro {
 class WebUIPluginEditor : public juce::AudioProcessorEditor, WebViewManager::Listener {
 public:
     WebUIPluginEditor(WebProcessor& p, const juce::String& url = "")
-            : juce::AudioProcessorEditor(p),
-              browser(*this, p.getWebViewManager())
+            : juce::AudioProcessorEditor(p)
+//              browser(*this, p.getWebViewManager())
     {
         addAndMakeVisible(browser);
-        browser.getWebViewManager().addListener(this);
+        browser.initialize(true, getWindowHandle());
+//        browser.getWebViewManager().addListener(this);
     }
 
     ~WebUIPluginEditor() override {
-        browser.getWebViewManager().removeListener(this);
+//        browser.getWebViewManager().removeListener(this);
     }
 
     void fileOpenerRequested(juce::String patternsAllowed) override {
@@ -47,13 +49,13 @@ public:
                 resultsView.addArrayElement(r.getFullPathName().toStdString());
             }
             juce::String js = "window.ui.juceFileOpened(" + choc::json::toString(resultsView) + ")";
-            browser.getWebViewManager().evaluateJavascript(js.toStdString());
+            browser.getWebview()->evaluateJavascript(js.toStdString());
         });
     }
 
     static WebUIPluginEditor* createFromHTMLString(WebProcessor& p, const juce::String& html) {
         auto editor = new WebUIPluginEditor(p);
-        editor->browser.getWebViewManager().setHTML(html.toStdString());
+//        editor->browser.getWebview()->set_html(html.toStdString());
         return editor;
     }
 
@@ -70,7 +72,7 @@ public:
         g.fillAll(juce::Colour(234, 229, 219));
     }
 
-    ChocBrowserComponent& getBrowser() { return browser; }
+//    ChocBrowserComponent& getBrowser() { return browser; }
 
     void setSizeScaled(int width, int height) {
         auto scale = getWindowsTextScaleFactor();
@@ -87,7 +89,8 @@ public:
     }
 
 private:
-    ChocBrowserComponent browser;
+//    ChocBrowserComponent browser;
+    WebviewBrowserComponent browser;
     std::unique_ptr<juce::FileChooser> fileChooser;
     juce::SharedResourcePointer<Resources> resources;
 };

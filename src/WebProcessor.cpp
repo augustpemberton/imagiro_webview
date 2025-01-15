@@ -30,7 +30,7 @@ namespace imagiro {
 
     void WebProcessor::wrapEditor(WebUIPluginEditor* e) {
 #if JUCE_DEBUG
-        e->getBrowser().getWebViewManager().navigate("http://localhost:4342");
+//        e->getBrowser().getWebViewManager().navigate("http://localhost:4342");
 #endif
 
         auto defaultSize = getDefaultWindowSize();
