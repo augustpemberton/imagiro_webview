@@ -46,7 +46,7 @@ namespace imagiro {
             );
 
             if (!view || !view->loadedOK()) {
-                throw std::exception("Failed to load WebView");
+                throw std::runtime_error("Failed to load WebView");
             }
 
             return view;
