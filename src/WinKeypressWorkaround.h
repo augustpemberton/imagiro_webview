@@ -8,8 +8,6 @@ class WinKeypressWorkaround : choc::ui::WebView::KeyListener, juce::Timer {
 public:
     WinKeypressWorkaround(choc::ui::WebView& w, juce::Component& c) : webView(w), component(c) {
         webView.addKeyListener(this);
-
-        startTimerHz(1);
     }
 
     ~WinKeypressWorkaround() override {

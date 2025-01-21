@@ -2,10 +2,9 @@
 #include "WebUIPluginEditor.h"
 
 namespace imagiro {
-
-    WebViewManager::WebViewManager(AssetServer& server) : server(server), jsEvalQueue(256) {
-        preparedWebview = createWebView();
-        setupWebview(*preparedWebview);
+    WebViewManager::WebViewManager(AssetServer &server)
+        : server(server), jsEvalQueue(256)
+    {
         startTimerHz(60);
     }
 
@@ -18,6 +17,11 @@ namespace imagiro {
     }
 
     std::shared_ptr<choc::ui::WebView> WebViewManager::getWebView(WebUIPluginEditor* editor) {
+        if (!preparedWebview) {
+            preparedWebview = createWebView();
+            setupWebview(*preparedWebview);
+        }
+
         auto activeView = std::move(preparedWebview);
         bindEditorSpecificFunctions(*activeView, editor);
         preparedWebview = createWebView();
@@ -31,14 +35,26 @@ namespace imagiro {
 #else
         auto debugMode = false;
 #endif
-        return std::make_shared<choc::ui::WebView>(
-                choc::ui::WebView::Options{
-                        debugMode, true, "",
-                        [&](auto& path) {
-                            return server.getResource(path);
-                        }
-                }
-        );
+        try {
+            auto view = std::make_shared<choc::ui::WebView>(
+                    choc::ui::WebView::Options{
+                            debugMode, true, "",
+                            [&](auto& path) {
+                                return server.getResource(path);
+                            }
+                    }
+            );
+
+            if (!view || !view->loadedOK()) {
+                throw std::runtime_error("Failed to load WebView");
+            }
+
+            return view;
+        } catch (const std::exception& e) {
+            resources->getErrorLogger().logMessage("webview creation failed");
+            resources->getErrorLogger().logMessage(e.what());
+            throw e;
+        }
     }
 
     void WebViewManager::bindEditorSpecificFunctions(choc::ui::WebView& view, WebUIPluginEditor* editor) {

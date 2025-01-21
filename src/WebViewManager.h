@@ -46,5 +46,7 @@ namespace imagiro {
         std::optional<std::string> currentURL;
         AssetServer& server;
         moodycamel::ConcurrentQueue<std::string> jsEvalQueue;
+
+        juce::SharedResourcePointer<Resources> resources;
     };
 }
