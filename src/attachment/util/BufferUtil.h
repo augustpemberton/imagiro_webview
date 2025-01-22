@@ -129,6 +129,8 @@ static auto getVisualizerData (
 static choc::value::Value getVisualizerDataForBuffer(juce::AudioSampleBuffer& buffer, int startSample,
                                                      int endSample, int numPoints) {
 
+    if (endSample <= 0) endSample = buffer.getNumSamples();
+
     auto view = choc::buffer::createChannelArrayView(buffer.getArrayOfReadPointers(),
                                                      (unsigned int) buffer.getNumChannels(),
                                                      (unsigned int) buffer.getNumSamples());
@@ -150,5 +152,6 @@ static choc::value::Value getVisualizerDataForBuffer(juce::AudioSampleBuffer& bu
     val.setMember("max", choc::buffer::createValueViewFromBuffer(interleavedMax));
     val.setMember("mag", visualizerData.mag);
     val.setMember("micro", visualizerData.micro);
+    val.setMember("bufferSize", buffer.getNumSamples());
     return val;
 }

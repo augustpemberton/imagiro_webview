@@ -17,11 +17,8 @@ class WebUIAttachment;
 
 class WebProcessor : public Processor {
 public:
-    WebProcessor(AssetServer& server, juce::String parametersYAMLString,
-                 juce::String currentVersion = "1.0.0", juce::String productSlug = "");
-    WebProcessor(const juce::AudioProcessor::BusesProperties& ioLayouts,
-                 AssetServer& server, juce::String parametersYAMLString,
-                 juce::String currentVersion = "1.0.0", juce::String productSlug = "");
+    WebProcessor(AssetServer& server, juce::String parametersYAMLString, const ParameterLoader& loader = ParameterLoader(),
+                 const juce::AudioProcessor::BusesProperties& layout = getDefaultProperties());
 
     WebViewManager& getWebViewManager() { return webViewManager; }
     juce::AudioProcessorEditor* createEditor() override;

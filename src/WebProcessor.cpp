@@ -9,24 +9,12 @@
 
 namespace imagiro {
 
-    WebProcessor::WebProcessor(AssetServer& server, juce::String parametersYAMLString, juce::String currentVersion, juce::String productSlug)
-            : Processor(parametersYAMLString, currentVersion, productSlug),
+    WebProcessor::WebProcessor(AssetServer& server, juce::String parametersYAMLString, const ParameterLoader& loader,
+                               const juce::AudioProcessor::BusesProperties& layout)
+            : Processor(parametersYAMLString, loader, layout),
               server(server),
               backgroundTaskRunner(webViewManager)
-    {
-//        init();
-    }
-
-    WebProcessor::WebProcessor(const juce::AudioProcessor::BusesProperties &ioLayouts,
-                               AssetServer& server,
-                               juce::String parametersYAMLString,
-                               juce::String currentVersion, juce::String productSlug)
-            : Processor(ioLayouts, parametersYAMLString, currentVersion, productSlug),
-              server(server),
-              backgroundTaskRunner(webViewManager)
-    {
-//        init();
-    }
+    { }
 
     void WebProcessor::wrapEditor(WebUIPluginEditor* e) {
 #if JUCE_DEBUG

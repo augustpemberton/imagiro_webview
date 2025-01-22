@@ -48,7 +48,11 @@ namespace imagiro {
             webViewManager.bind(
                     "juce_getCurrentVersion",
                     [&](const choc::value::ValueView &args) -> choc::value::Value {
-                        return choc::value::Value(processor.getCurrentVersion().toStdString());
+                        std::string version;
+#ifdef PROJECT_VERSION
+                        version = std::string(PROJECT_VERSION);
+#endif
+                        return choc::value::Value(version);
                     }
             );
 
