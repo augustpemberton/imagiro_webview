@@ -144,7 +144,7 @@ void imagiro::ParameterAttachment::addBindings() {
                 auto param = processor.getParameter(paramID);
                 if (!param) return {};
 
-                auto val = param->getConfig()->valueFunction(*param, displayValue);
+                auto val = param->getConfig()->valueFunction(displayValue);
                 auto val01 = param->convertTo0to1(val);
                 return choc::value::Value(val01);
             });
@@ -157,7 +157,7 @@ void imagiro::ParameterAttachment::addBindings() {
                 auto param = processor.getParameter(paramID);
                 if (!param) return {};
 
-                auto val = param->getConfig()->valueFunction(*param, displayValue);
+                auto val = param->getConfig()->valueFunction(displayValue);
                 param->setUserValueAsUserAction(val);
 
                 return {};
