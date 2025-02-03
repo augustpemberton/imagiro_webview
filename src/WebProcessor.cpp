@@ -6,6 +6,7 @@
 #include "imagiro_webview/src/attachment/PluginInfoAttachment.h"
 #include "imagiro_webview/src/attachment/FileIOAttachment.h"
 #include "imagiro_webview/src/attachment/UtilAttachment.h"
+#include "imagiro_webview/src/attachment/ModMatrixAttachment.h"
 
 namespace imagiro {
 
@@ -70,6 +71,7 @@ namespace imagiro {
         addUIAttachment(std::make_unique<PluginInfoAttachment>(*this, webViewManager));
         addUIAttachment(std::make_unique<FileIOAttachment>(*this, webViewManager));
         addUIAttachment(std::make_unique<UtilAttachment>(*this, webViewManager));
+        addUIAttachment(std::make_unique<ModMatrixAttachment>(*this, modMatrix));
         hasInitialized = true;
     }
 
@@ -102,6 +104,14 @@ namespace imagiro {
                 js += "'"; js += val.value; js += "');";
                 webViewManager.evaluateJavascript(js);
             }
+        }
+    }
+
+    void WebProcessor::processBlock(juce::AudioBuffer<float> &buffer, juce::MidiBuffer &midiMessages) {
+        Processor::processBlock(buffer, midiMessages);
+
+        for (auto& attachment : uiAttachments) {
+            attachment->processCallback();
         }
     }
 }

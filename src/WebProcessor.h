@@ -44,6 +44,8 @@ public:
 
     BackgroundTaskRunner& getBackgroundTaskRunner() { return backgroundTaskRunner; }
 
+    void processBlock(juce::AudioBuffer<float> &buffer, juce::MidiBuffer &midiMessages) override;
+
 protected:
     void init();
     bool hasInitialized {false};

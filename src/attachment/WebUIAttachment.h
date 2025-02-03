@@ -17,6 +17,8 @@ namespace imagiro {
         virtual void addBindings() = 0;
         virtual void addListeners() {}
 
+        virtual void processCallback() {}
+
     protected:
         WebProcessor& processor;
         WebViewManager& webViewManager;
