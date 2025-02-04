@@ -83,6 +83,9 @@ class ModMatrixAttachment : public WebUIAttachment, ModMatrix::Listener {
         MatrixType matrixMessageThread {};
         moodycamel::ReaderWriterQueue<MatrixType> matrixFifo {128};
 
+        std::unordered_map<SourceID, float> latestSourceValues;
+        moodycamel::ReaderWriterQueue<std::pair<SourceID, float>> sourceValueFifo {512};
+
         choc::value::Value getValueFromMatrix(MatrixType m) {
             auto val = choc::value::createEmptyArray();
             for(const auto& [pair, connection] : m) {
