@@ -9,21 +9,30 @@
 namespace imagiro {
     using MatrixType = std::unordered_map<std::pair<SourceID, TargetID>, ModMatrix::ConnectionInfo>;
 
-class ModMatrixAttachment : public WebUIAttachment, ModMatrix::Listener {
+class ModMatrixAttachment : public WebUIAttachment, ModMatrix::Listener, juce::Timer {
     public:
         ModMatrixAttachment(WebProcessor& p, ModMatrix& matrix)
             : WebUIAttachment(p, p.getWebViewManager()), modMatrix(matrix)
         {
             modMatrix.addListener(this);
+            startTimerHz(30);
         }
 
         ~ModMatrixAttachment() override {
             modMatrix.removeListener(this);
         }
 
-        void OnMatrixUpdated() override {
+        void timerCallback() override {
+            while (matrixFifo.try_dequeue(matrixMessageThread)) { /**/ }
+
+            if (!sendMatrixUpdateFlag) return;
             auto matrix = getValueFromMatrix(matrixMessageThread);
             webViewManager.evaluateJavascript("window.ui.modMatrixUpdated("+choc::json::toString(matrix)+")");
+            sendMatrixUpdateFlag = false;
+        }
+
+        void OnMatrixUpdated() override {
+            sendMatrixUpdateFlagAfterNextDataLoad = true;
         }
 
         void addBindings() override {
@@ -45,7 +54,6 @@ class ModMatrixAttachment : public WebUIAttachment, ModMatrix::Listener {
             });
 
             webViewManager.bind("juce_getModMatrix", [&](const choc::value::ValueView& args) -> choc::value::Value {
-                while (matrixFifo.try_dequeue(matrixMessageThread)) { /**/ }
                 return getValueFromMatrix(matrixMessageThread);
             });
 
@@ -75,6 +83,10 @@ class ModMatrixAttachment : public WebUIAttachment, ModMatrix::Listener {
         // call each processBlock tick
         void processCallback() override {
             matrixFifo.enqueue(modMatrix.getMatrix());
+            if (sendMatrixUpdateFlagAfterNextDataLoad) {
+                sendMatrixUpdateFlagAfterNextDataLoad = false;
+                sendMatrixUpdateFlag = true;
+            }
         }
 
     private:
@@ -83,7 +95,10 @@ class ModMatrixAttachment : public WebUIAttachment, ModMatrix::Listener {
         MatrixType matrixMessageThread {};
         moodycamel::ReaderWriterQueue<MatrixType> matrixFifo {128};
 
-        std::unordered_map<SourceID, float> latestSourceValues;
+        std::atomic<bool> sendMatrixUpdateFlag {false};
+        std::atomic<bool> sendMatrixUpdateFlagAfterNextDataLoad {false};
+
+    std::unordered_map<SourceID, float> latestSourceValues;
         moodycamel::ReaderWriterQueue<std::pair<SourceID, float>> sourceValueFifo {512};
 
         choc::value::Value getValueFromMatrix(MatrixType m) {
