@@ -7,12 +7,13 @@
 #include "../WebProcessor.h"
 
 namespace imagiro {
-    using MatrixType = std::unordered_map<std::pair<SourceID, TargetID>, ModMatrix::ConnectionInfo>;
 
-class ModMatrixAttachment : public WebUIAttachment, ModMatrix::Listener, juce::Timer {
+    class ModMatrixAttachment : public WebUIAttachment, ModMatrix::Listener, juce::Timer {
+    private:
+
     public:
         ModMatrixAttachment(WebProcessor& p, ModMatrix& matrix)
-            : WebUIAttachment(p, p.getWebViewManager()), modMatrix(matrix)
+                : WebUIAttachment(p, p.getWebViewManager()), modMatrix(matrix)
         {
             modMatrix.addListener(this);
             startTimerHz(30);
@@ -26,8 +27,8 @@ class ModMatrixAttachment : public WebUIAttachment, ModMatrix::Listener, juce::T
             while (matrixFifo.try_dequeue(matrixMessageThread)) { /**/ }
 
             if (!sendMatrixUpdateFlag) return;
-            auto matrix = getValueFromMatrix(matrixMessageThread);
-            webViewManager.evaluateJavascript("window.ui.modMatrixUpdated("+choc::json::toString(matrix)+")");
+            auto matrixValue = matrixMessageThread.getState();
+            webViewManager.evaluateJavascript("window.ui.modMatrixUpdated("+choc::json::toString(matrixValue)+")");
             sendMatrixUpdateFlag = false;
         }
 
@@ -41,7 +42,10 @@ class ModMatrixAttachment : public WebUIAttachment, ModMatrix::Listener, juce::T
                 auto targetID = args[1].getWithDefault(0u);
                 auto depth = args[2].getWithDefault(0.f);
 
-                modMatrix.setConnectionInfo(sourceID, targetID, {depth});
+                auto attackMS = args.size() > 3 ? args[3].getWithDefault(0.f) : 0.f;
+                auto releaseMS = args.size() > 4 ? args[4].getWithDefault(0.f) : 0.f;
+
+                modMatrix.setConnection(sourceID, targetID, {depth, attackMS, releaseMS});
                 return {};
             });
 
@@ -49,12 +53,12 @@ class ModMatrixAttachment : public WebUIAttachment, ModMatrix::Listener, juce::T
                 auto sourceID = args[0].getWithDefault(0u);
                 auto targetID = args[1].getWithDefault(0u);
 
-                modMatrix.removeConnectionInfo(sourceID, targetID);
+                modMatrix.removeConnection(sourceID, targetID);
                 return {};
             });
 
             webViewManager.bind("juce_getModMatrix", [&](const choc::value::ValueView& args) -> choc::value::Value {
-                return getValueFromMatrix(matrixMessageThread);
+                return matrixMessageThread.getState();
             });
 
             webViewManager.bind("juce_getSources", [&](const choc::value::ValueView& args) -> choc::value::Value {
@@ -82,7 +86,7 @@ class ModMatrixAttachment : public WebUIAttachment, ModMatrix::Listener, juce::T
 
         // call each processBlock tick
         void processCallback() override {
-            matrixFifo.enqueue(modMatrix.getMatrix());
+            matrixFifo.enqueue(modMatrix.getSerializedMatrix());
             if (sendMatrixUpdateFlagAfterNextDataLoad) {
                 sendMatrixUpdateFlagAfterNextDataLoad = false;
                 sendMatrixUpdateFlag = true;
@@ -92,25 +96,13 @@ class ModMatrixAttachment : public WebUIAttachment, ModMatrix::Listener, juce::T
     private:
         ModMatrix& modMatrix;
 
-        MatrixType matrixMessageThread {};
-        moodycamel::ReaderWriterQueue<MatrixType> matrixFifo {128};
+        SerializedMatrix matrixMessageThread {};
+        moodycamel::ReaderWriterQueue<SerializedMatrix> matrixFifo {128};
 
         std::atomic<bool> sendMatrixUpdateFlag {false};
         std::atomic<bool> sendMatrixUpdateFlagAfterNextDataLoad {false};
 
-    std::unordered_map<SourceID, float> latestSourceValues;
+        std::unordered_map<SourceID, float> latestSourceValues;
         moodycamel::ReaderWriterQueue<std::pair<SourceID, float>> sourceValueFifo {512};
-
-        choc::value::Value getValueFromMatrix(MatrixType m) {
-            auto val = choc::value::createEmptyArray();
-            for(const auto& [pair, connection] : m) {
-                auto connectionValue = choc::value::createObject("connection");
-                connectionValue.addMember("sourceID", choc::value::Value((int)pair.first));
-                connectionValue.addMember("targetID", choc::value::Value((int)pair.second));
-                connectionValue.addMember("depth", choc::value::Value(connection.depth));
-                val.addArrayElement(connectionValue);
-            }
-            return val;
-        }
     };
 }
