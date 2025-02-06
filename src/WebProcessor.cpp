@@ -78,12 +78,14 @@ namespace imagiro {
     void WebProcessor::addUIAttachment(WebUIAttachment& attachment) {
         attachment.addListeners();
         attachment.addBindings();
+        attachments.push_back(&attachment);
     }
 
     void WebProcessor::addUIAttachment(std::unique_ptr<WebUIAttachment> attachment) {
-        uiAttachments.emplace_back(std::move(attachment));
-        uiAttachments.back()->addListeners();
-        uiAttachments.back()->addBindings();
+        ownedAttachments.emplace_back(std::move(attachment));
+        ownedAttachments.back()->addListeners();
+        ownedAttachments.back()->addBindings();
+        attachments.push_back(ownedAttachments.back().get());
     }
 
     Preset WebProcessor::createPreset(const juce::String &name, bool isDAWSaveState) {
@@ -110,7 +112,7 @@ namespace imagiro {
     void WebProcessor::processBlock(juce::AudioBuffer<float> &buffer, juce::MidiBuffer &midiMessages) {
         Processor::processBlock(buffer, midiMessages);
 
-        for (auto& attachment : uiAttachments) {
+        for (auto attachment : attachments) {
             attachment->processCallback();
         }
     }

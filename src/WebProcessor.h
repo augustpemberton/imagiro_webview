@@ -51,7 +51,8 @@ protected:
     bool hasInitialized {false};
     AssetServer& server;
     WebViewManager webViewManager { server };
-    std::vector<std::unique_ptr<WebUIAttachment>> uiAttachments;
+    std::vector<std::unique_ptr<WebUIAttachment>> ownedAttachments;
+    std::vector<WebUIAttachment*> attachments;
 
      WebviewData webViewCustomData;
 
