@@ -3,13 +3,13 @@
 //
 
 #pragma once
-#include "WebUIAttachment.h"
-#include <imagiro_processor/imagiro_processor.h>
+#include<imagiro_processor/imagiro_processor.h>
+#include "UIAttachment.h"
 
 namespace imagiro {
-    class ParameterAttachment : public WebUIAttachment, public Parameter::Listener {
+    class ParameterAttachment : public UIAttachment, public Parameter::Listener {
     public:
-        ParameterAttachment(WebProcessor& p, WebViewManager& w);
+        ParameterAttachment(UIConnection& connection, Processor& p);
         ~ParameterAttachment() override;
 
         void addListeners() override;
@@ -19,6 +19,7 @@ namespace imagiro {
         void configChanged(imagiro::Parameter *param) override;
 
     private:
+        Processor& processor;
         void sendStateToBrowser(Parameter* param);
         choc::value::Value getAllParameterSpecValue();
 

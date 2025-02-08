@@ -1,28 +1,29 @@
 //
-// Created by August Pemberton on 28/10/2023.
+// Created by August Pemberton on 08/02/2025.
 //
 
 #pragma once
 
+
 namespace imagiro {
-    class WebProcessor;
-
-    class WebUIAttachment {
+    class WebUIAttachment : public UIAttachment {
     public:
-        WebUIAttachment(WebProcessor& p, WebViewManager& w)
-        : processor(p), webViewManager(w) { }
+        explicit WebUIAttachment(WebUIConnection& connection)
+            : UIAttachment(connection), connection(connection)
+        {
 
-        virtual ~WebUIAttachment() = default;
+        }
 
-        virtual void addBindings() = 0;
-        virtual void addListeners() {}
+        void addBindings() override {
+            connection.bind("juce_requestFileChooser",
+                [&](const choc::value::ValueView& args) -> choc::value::Value {
+                    connection.requestFileChooser(args[0].toString());
+                    return {};
+                });
+        }
 
-        virtual void processCallback() {}
+    private:
+        WebUIConnection& connection;
 
-    protected:
-        WebProcessor& processor;
-        WebViewManager& webViewManager;
-
-        JUCE_LEAK_DETECTOR(WebUIAttachment)
     };
 }

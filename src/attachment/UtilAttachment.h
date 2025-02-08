@@ -3,19 +3,19 @@
 //
 
 #pragma once
-#include "WebUIAttachment.h"
-#include "WebviewData.h"
+#include "UIAttachment.h"
+#include "util/UIData.h"
 
 namespace imagiro {
-    class UtilAttachment : public WebUIAttachment {
+    class UtilAttachment : public UIAttachment {
     public:
-        UtilAttachment(WebProcessor& p, WebViewManager& w)
-                : WebUIAttachment(p, w) {
+        UtilAttachment(UIConnection& c, UIData& u, Processor& p)
+                : UIAttachment(c), uiData(u), processor(p) {
 
         }
 
         void addBindings() override {
-            webViewManager.bind(
+            connection.bind(
                     "juce_compressString",
                     [&](const choc::value::ValueView &args) -> choc::value::Value {
                         auto string = std::string(args[0].getWithDefault(""));
@@ -28,14 +28,14 @@ namespace imagiro {
                         return choc::value::Value {encodedStream.toString().toStdString()};
                     });
 
-            webViewManager.bind(
+            connection.bind(
                     "juce_decompressString",
                     [&](const choc::value::ValueView &args) -> choc::value::Value {
                         auto encodedString = args[0].getWithDefault("");
 
                         juce::MemoryOutputStream decodedStream;
                         if (!juce::Base64::convertFromBase64(decodedStream, encodedString)) {
-                            throw new std::runtime_error("Failed to decode string");
+                            throw std::runtime_error("Failed to decode string");
                         }
 
                         std::string compressedString (static_cast<const char*>(decodedStream.getData()),
@@ -46,33 +46,30 @@ namespace imagiro {
                     });
 
 
-            webViewManager.bind(
+            connection.bind(
                     "juce_saveInProcessor", [&](const choc::value::ValueView &args) -> choc::value::Value {
                         auto key = std::string(args[0].getWithDefault(""));
                         if (key.empty()) return {};
                         auto value = std::string(args[1].getWithDefault(""));
                         auto saveInPreset = args[2].getWithDefault(false);
 
-                        processor.getWebViewData().set(key, value, saveInPreset);
+                        uiData.set(key, value, saveInPreset);
 
-                        std::string js = "window.ui.processorValueUpdated(";
-                        js += "'"; js += key; js += "',";
-                        js += "'"; js += value; js += "');";
-                        webViewManager.evaluateJavascript(js);
+                        connection.eval("window.ui.processorValueUpdated", {args[0], args[1]});
                         return {};
                     });
 
-            webViewManager.bind(
+            connection.bind(
                     "juce_loadFromProcessor", [&](const choc::value::ValueView &args) -> choc::value::Value {
                         auto key = std::string(args[0].getWithDefault(""));
                         if (key.empty()) return {};
 
-                        auto val = processor.getWebViewData().get(key);
+                        auto val = uiData.get(key);
                         if (!val) return {};
                         return choc::value::Value(*val);
                     });
 
-            webViewManager.bind(
+            connection.bind(
                     "juce_saveInConfig",
                     [&](const choc::value::ValueView &args) -> choc::value::Value {
                         auto key = args[0].toString();
@@ -95,15 +92,11 @@ namespace imagiro {
                         }
 
                         configFile->save();
-
-                        std::string js = "window.ui.configValueUpdated(";
-                        js += "'"; js += key; js += "',";
-                        js += "'"; js += configFile->getValue(key).toStdString(); js += "');";
-                        webViewManager.evaluateJavascript(js);
+                        connection.eval("window.ui.configValueUpdated", {args[0], args[1]});
                         return {};
                     }
             );
-            webViewManager.bind(
+            connection.bind(
                     "juce_loadFromConfig",
                     [&](const choc::value::ValueView &args) -> choc::value::Value {
                         auto key = juce::String(args[0].toString());
@@ -116,7 +109,7 @@ namespace imagiro {
                     }
             );
 
-            webViewManager.bind(
+            connection.bind(
                     "juce_Log",
                     [&](const choc::value::ValueView &args) -> choc::value::Value {
                         auto string = args[0].getWithDefault("");
@@ -124,50 +117,43 @@ namespace imagiro {
                         return {};
                     });
 
-            webViewManager.bind("juce_copyToClipboard",
+            connection.bind("juce_copyToClipboard",
                                 [&](const choc::value::ValueView& args) -> choc::value::Value {
                                     juce::SystemClipboard::copyTextToClipboard(args[0].toString());
                                     return {};
                                 }
             );
 
-            webViewManager.bind("juce_getTextFromClipboard",
-                                [&](const choc::value::ValueView& args) -> choc::value::Value {
+            connection.bind("juce_getTextFromClipboard",
+                                [&](const choc::value::ValueView& ) -> choc::value::Value {
                                     return choc::value::Value(
                                             juce::SystemClipboard::getTextFromClipboard().toStdString()
                                     );
                                 }
             );
 
-            webViewManager.bind("juce_setDefaultBPM", [&](const choc::value::ValueView& args) -> choc::value::Value {
+            connection.bind("juce_setDefaultBPM", [&](const choc::value::ValueView& args) -> choc::value::Value {
                 const auto defaultBPM = args[0].getWithDefault(120);
                 processor.setDefaultBPM(defaultBPM);
                 return {};
             });
-            webViewManager.bind("juce_getDefaultBPM", [&](const choc::value::ValueView& args) -> choc::value::Value {
+            connection.bind("juce_getDefaultBPM", [&](const choc::value::ValueView&) -> choc::value::Value {
                 return choc::value::Value(processor.getDefaultBPM());
             });
 
-            webViewManager.bind("juce_emitSignal", [&](const choc::value::ValueView& args) -> choc::value::Value {
+            connection.bind("juce_emitSignal", [&](const choc::value::ValueView& args) -> choc::value::Value {
                 auto signalName = std::string(args[0].getWithDefault(""));
 
-                std::string signalArgs;
-                if (args.size() > 1) {
-                    signalArgs = choc::json::toString(args[1]);
-                }
-
-                std::string evalString = "window.ui.onSignal('" + signalName + "'";
-
-                if (!signalArgs.empty()) {
-                    evalString += ", " + signalArgs;
-                }
-
-                evalString += ")";
-
-                webViewManager.evaluateJavascript(evalString);
+                std::vector<choc::value::ValueView> v;
+                if (args.size() > 1) v.push_back(args[1]);
+                connection.eval("window.ui.onSignal", v);
                 return {};
             });
         }
+
+    private:
+        UIData& uiData;
+        Processor& processor;
 
     };
 }

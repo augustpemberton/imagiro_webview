@@ -4,32 +4,26 @@
 
 #pragma once
 #include <imagiro_processor/imagiro_processor.h>
-#include "WebUIAttachment.h"
+#include "UIAttachment.h"
 
 namespace imagiro {
-    class FileIOAttachment : public WebUIAttachment {
-        using WebUIAttachment::WebUIAttachment;
+    class FileIOAttachment : public UIAttachment {
+        using UIAttachment::UIAttachment;
 
         void addBindings() override {
-            webViewManager.bind("juce_doesFileExist",
+            connection.bind("juce_doesFileExist",
                                 [&](const choc::value::ValueView& args) -> choc::value::Value {
                 const auto path = args[0].getWithDefault("");
                 return choc::value::Value(juce::File(path).exists());
             });
 
-            webViewManager.bind("juce_doesFileHaveWriteAccess",
+            connection.bind("juce_doesFileHaveWriteAccess",
                                 [&](const choc::value::ValueView& args) -> choc::value::Value {
                                     const auto path = args[0].getWithDefault("");
                                     return choc::value::Value(juce::File(path).hasWriteAccess());
                                 });
 
-            webViewManager.bind("juce_requestFileChooser",
-            [&](const choc::value::ValueView& args) -> choc::value::Value {
-                webViewManager.requestFileChooser(args[0].toString());
-                return {};
-            });
-
-            webViewManager.bind("juce_revealPath",
+            connection.bind("juce_revealPath",
             [&](const choc::value::ValueView& args) -> choc::value::Value {
                 auto path = args[0].toString();
                 auto file = juce::File(path);

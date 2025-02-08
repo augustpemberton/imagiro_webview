@@ -5,39 +5,47 @@
 #include <juce_audio_processors/juce_audio_processors.h>
 #include "imagiro_webview/src/AssetServer/BinaryDataAssetServer.h"
 #include <imagiro_util/imagiro_util.h>
+#include "../UIConnection.h"
 
 namespace imagiro {
     class WebUIPluginEditor;
-    class WebViewManager : juce::Timer {
+
+    class WebUIConnection : public UIConnection, juce::Timer {
     public:
         struct Listener {
-            virtual void fileOpenerRequested(juce::String patternsAllowed) {}
+            virtual void fileOpenerRequested(const juce::String& patternsAllowed) {}
         };
-
-        WebViewManager(AssetServer& server);
 
         void addListener(Listener* l);
         void removeListener(Listener* l);
+
+        explicit WebUIConnection(AssetServer& server);
+        ~WebUIConnection() override = default;
 
         std::shared_ptr<choc::ui::WebView> getWebView(WebUIPluginEditor* editor);
         std::shared_ptr<choc::ui::WebView> createWebView();
 
         static void bindEditorSpecificFunctions(choc::ui::WebView& view, WebUIPluginEditor* editor);
 
+        void eval(const std::string &functionName, const std::vector<choc::value::ValueView> &args = {}) override;
+        void bind(const std::string &functionName, CallbackFn&& callback) override;
+
+        void requestFileChooser(juce::String patternsAllowed = "*.wav");
+
         void navigate(const std::string &url);
+        void setHTML(const std::string &html);
         void reload();
         std::string getCurrentURL();
-        void setHTML(const std::string &html);
-        void evaluateJavascript(const std::string& js);
+
         void timerCallback() override;
-        void bind(const std::string &functionName, choc::ui::WebView::CallbackFn &&fn);
-        static choc::ui::WebView::CallbackFn wrapFn(choc::ui::WebView::CallbackFn func);
-        void requestFileChooser(juce::String patternsAllowed = "*.wav");
-        void removeWebView(choc::ui::WebView* v);
         bool isShowing();
+        void removeWebView(choc::ui::WebView* v);
         void setupWebview(choc::ui::WebView& wv);
 
     private:
+        static choc::ui::WebView::CallbackFn wrapFn(choc::ui::WebView::CallbackFn func);
+        void evaluateJavascript(const std::string& js);
+
         juce::ListenerList<Listener> listeners;
         std::shared_ptr<choc::ui::WebView> preparedWebview;
         juce::Array<choc::ui::WebView*, juce::CriticalSection> activeWebViews;

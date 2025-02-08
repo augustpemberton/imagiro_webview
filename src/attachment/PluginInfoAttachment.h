@@ -5,7 +5,7 @@
 #pragma once
 #include <timestamp.h>
 #include <imagiro_processor/imagiro_processor.h>
-#include "WebUIAttachment.h"
+#include "UIAttachment.h"
 
 #include "juce_audio_devices/juce_audio_devices.h"
 #include "juce_audio_plugin_client/juce_audio_plugin_client.h"
@@ -13,11 +13,11 @@
 #include "juce_audio_plugin_client/Standalone/juce_StandaloneFilterWindow.h"
 
 namespace imagiro {
-    class PluginInfoAttachment : public WebUIAttachment, juce::ChangeListener,
+    class PluginInfoAttachment : public UIAttachment, juce::ChangeListener,
                                  juce::Timer {
     public:
-        PluginInfoAttachment(WebProcessor& p, WebViewManager& w)
-                : WebUIAttachment(p, w)
+        PluginInfoAttachment(UIConnection& connection, Processor& p)
+                : UIAttachment(connection), processor(p)
         {
             startTimer(100);
         }
@@ -41,11 +41,11 @@ namespace imagiro {
         }
 
         void changeListenerCallback(juce::ChangeBroadcaster *source) override {
-            webViewManager.evaluateJavascript("window.ui.onDevicesChanged()");
+            connection.eval("window.ui.onDevicesChanged()");
         }
 
         void addBindings() override {
-            webViewManager.bind(
+            connection.bind(
                     "juce_getCurrentVersion",
                     [&](const choc::value::ValueView &args) -> choc::value::Value {
                         std::string version;
@@ -56,7 +56,7 @@ namespace imagiro {
                     }
             );
 
-            webViewManager.bind(
+            connection.bind(
                     "juce_showStandaloneAudioSettings",
                     [&](const choc::value::ValueView &args) -> choc::value::Value {
                         if (!juce::StandalonePluginHolder::getInstance()) return {};
@@ -65,7 +65,7 @@ namespace imagiro {
                     }
             );
 
-            webViewManager.bind(
+            connection.bind(
                     "juce_setAudioDeviceType",
                     [&](const choc::value::ValueView &args) -> choc::value::Value {
                         auto standaloneInstance = juce::StandalonePluginHolder::getInstance();
@@ -78,7 +78,7 @@ namespace imagiro {
                         return {};
                     });
 
-            webViewManager.bind(
+            connection.bind(
                     "juce_getAudioDeviceType",
                     [&](const choc::value::ValueView &args) -> choc::value::Value {
                         auto standaloneInstance = juce::StandalonePluginHolder::getInstance();
@@ -90,7 +90,7 @@ namespace imagiro {
                         return choc::value::Value{deviceManager.getCurrentAudioDeviceType().toStdString()};
                     });
 
-            webViewManager.bind(
+            connection.bind(
                     "juce_getAudioDeviceTypes",
                     [&](const choc::value::ValueView &args) -> choc::value::Value {
                         auto standaloneInstance = juce::StandalonePluginHolder::getInstance();
@@ -107,7 +107,7 @@ namespace imagiro {
                         return types;
                     });
 
-            webViewManager.bind(
+            connection.bind(
                     "juce_getAudioDeviceSetup",
                     [&](const choc::value::ValueView &args) -> choc::value::Value {
                         auto standaloneInstance = juce::StandalonePluginHolder::getInstance();
@@ -129,7 +129,7 @@ namespace imagiro {
                         return setupValue;
                     });
 
-            webViewManager.bind(
+            connection.bind(
                     "juce_setAudioDeviceSetup",
                     [&](const choc::value::ValueView &args) -> choc::value::Value {
                         auto standaloneInstance = juce::StandalonePluginHolder::getInstance();
@@ -162,7 +162,7 @@ namespace imagiro {
                         return {};
                     });
 
-            webViewManager.bind(
+            connection.bind(
                     "juce_getAvailableSampleRates",
                     [&](const choc::value::ValueView &args) -> choc::value::Value {
                         auto standaloneInstance = juce::StandalonePluginHolder::getInstance();
@@ -181,7 +181,7 @@ namespace imagiro {
                         return rates;
                     });
 
-            webViewManager.bind(
+            connection.bind(
                     "juce_getAvailableBufferSizes",
                     [&](const choc::value::ValueView &args) -> choc::value::Value {
                         auto standaloneInstance = juce::StandalonePluginHolder::getInstance();
@@ -199,7 +199,7 @@ namespace imagiro {
                         return sizes;
                     });
 
-            webViewManager.bind(
+            connection.bind(
                     "juce_getAvailableOutputDevices",
                     [&](const choc::value::ValueView &args) -> choc::value::Value {
                         auto standaloneInstance = juce::StandalonePluginHolder::getInstance();
@@ -217,7 +217,7 @@ namespace imagiro {
                         return outputs;
                     });
 
-            webViewManager.bind(
+            connection.bind(
                     "juce_getAvailableInputDevices",
                     [&](const choc::value::ValueView &args) -> choc::value::Value {
                         auto standaloneInstance = juce::StandalonePluginHolder::getInstance();
@@ -234,7 +234,7 @@ namespace imagiro {
                         return inputs;
                     });
 
-            webViewManager.bind(
+            connection.bind(
                     "juce_getAvailableMidiInputDevices",
                     [&](const choc::value::ValueView &args) -> choc::value::Value {
                         auto standaloneInstance = juce::StandalonePluginHolder::getInstance();
@@ -255,7 +255,7 @@ namespace imagiro {
                         return inputs;
                     });
 
-            webViewManager.bind(
+            connection.bind(
                     "juce_setMidiInputDevicesEnabled",
                     [&](const choc::value::ValueView &args) -> choc::value::Value {
 
@@ -274,13 +274,13 @@ namespace imagiro {
                         return {};
                     });
 
-            webViewManager.bind(
+            connection.bind(
                     "juce_getMillisecondTime",
                     [&](const choc::value::ValueView &args) -> choc::value::Value {
                         return choc::value::Value((juce::int64) juce::Time::getMillisecondCounter());
                     });
 
-            webViewManager.bind(
+            connection.bind(
                     "juce_getWrapperType",
                     [&](const choc::value::ValueView &args) -> choc::value::Value {
                         std::string wrapperTypeString;
@@ -300,14 +300,14 @@ namespace imagiro {
                     }
             );
 
-            webViewManager.bind(
+            connection.bind(
                     "juce_getPluginName",
                     [&](const choc::value::ValueView &args) -> choc::value::Value {
                         return choc::value::Value(JucePlugin_Name);
                     }
             );
 
-            webViewManager.bind("juce_getIsDebug",
+            connection.bind("juce_getIsDebug",
                                 [&](const choc::value::ValueView &args) -> choc::value::Value {
 #if JUCE_DEBUG
                                     return choc::value::Value(true);
@@ -316,7 +316,7 @@ namespace imagiro {
 #endif
                                 });
 
-            webViewManager.bind("juce_getPlatform",
+            connection.bind("juce_getPlatform",
                                 [&](const choc::value::ValueView &args) -> choc::value::Value {
                                     if ((juce::SystemStats::getOperatingSystemType() & juce::SystemStats::Windows) !=
                                         0) {
@@ -330,7 +330,7 @@ namespace imagiro {
                                     }
                                 });
 
-            webViewManager.bind("juce_getDebugVersionString",
+            connection.bind("juce_getDebugVersionString",
                                 [&](const choc::value::ValueView &args) -> choc::value::Value {
                                     juce::String statusString = " ";
 
@@ -346,21 +346,21 @@ namespace imagiro {
                                 }
             );
 
-            webViewManager.bind(
+            connection.bind(
                     "juce_getCpuLoad",
                     [&](const choc::value::ValueView &args) -> choc::value::Value {
                         return choc::value::Value(processor.getCpuLoad());
                     }
             );
 
-            webViewManager.bind(
+            connection.bind(
                     "juce_getUUID",
                     [&](const choc::value::ValueView &args) -> choc::value::Value {
                         return choc::value::Value(uuid.toString().toStdString());
                     });
 
 
-            webViewManager.bind("juce_getIsBeta",
+            connection.bind("juce_getIsBeta",
                                 [&](const choc::value::ValueView &args) -> choc::value::Value {
 #ifdef BETA
                                     return choc::value::Value(true);
@@ -369,28 +369,19 @@ namespace imagiro {
 #endif
                                 });
 
-            webViewManager.bind("juce_getDefaultWindowSize",
-                                [&](const choc::value::ValueView &args) -> choc::value::Value {
-                                    const auto size = processor.getDefaultWindowSize();
-                                    auto state = choc::value::createObject("WindowSize");
-                                    state.setMember("x", size.x);
-                                    state.setMember("y", size.y);
-                                    return state;
-                                });
-
-            webViewManager.bind("juce_openURL",
+            connection.bind("juce_openURL",
                                 [&](const choc::value::ValueView &args) -> choc::value::Value {
                                     juce::URL(args[0].getWithDefault("https://imagi.ro")).launchInDefaultBrowser();
                                     return {};
                                 });
 
-            webViewManager.bind("juce_getTimeOpened",
+            connection.bind("juce_getTimeOpened",
                                 [&](const choc::value::ValueView &args) -> choc::value::Value {
                                     const auto time = juce::SharedResourcePointer<Resources>()->getConfigFile()->getIntValue("timeOpened", 0);
                                     return choc::value::Value(time);
                                 });
 
-            webViewManager.bind("juce_getProductSlug",
+            connection.bind("juce_getProductSlug",
                                 [&](const choc::value::ValueView &args) -> choc::value::Value {
                                     std::string productSlug;
 #ifdef PRODUCT_SLUG
@@ -403,6 +394,7 @@ namespace imagiro {
 
 
     private:
+        Processor& processor;
         juce::Uuid uuid;
     };
 }

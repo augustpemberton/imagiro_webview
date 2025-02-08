@@ -14,21 +14,21 @@
 #endif
 
 namespace imagiro {
-class WebUIPluginEditor : public juce::AudioProcessorEditor, WebViewManager::Listener {
+class WebUIPluginEditor : public juce::AudioProcessorEditor, WebUIConnection::Listener {
 public:
     WebUIPluginEditor(WebProcessor& p, const juce::String& url = "")
             : juce::AudioProcessorEditor(p),
-              browser(*this, p.getWebViewManager())
+              browser(*this, p.getWebUIConnection())
     {
         addAndMakeVisible(browser);
-        browser.getWebViewManager().addListener(this);
+        browser.getWebUIConnection().addListener(this);
     }
 
     ~WebUIPluginEditor() override {
-        browser.getWebViewManager().removeListener(this);
+        browser.getWebUIConnection().removeListener(this);
     }
 
-    void fileOpenerRequested(juce::String patternsAllowed) override {
+    void fileOpenerRequested(const juce::String& patternsAllowed) override {
         fileChooser = std::make_unique<juce::FileChooser>(
                 "please choose a file",
                 juce::File::getSpecialLocation(juce::File::userHomeDirectory),
@@ -46,14 +46,13 @@ public:
             for (const auto& r : results) {
                 resultsView.addArrayElement(r.getFullPathName().toStdString());
             }
-            juce::String js = "window.ui.juceFileOpened(" + choc::json::toString(resultsView) + ")";
-            browser.getWebViewManager().evaluateJavascript(js.toStdString());
+            browser.getWebUIConnection().eval("window.ui.juceFileOpened", {resultsView});
         });
     }
 
     static WebUIPluginEditor* createFromHTMLString(WebProcessor& p, const juce::String& html) {
         auto editor = new WebUIPluginEditor(p);
-        editor->browser.getWebViewManager().setHTML(html.toStdString());
+        editor->browser.getWebUIConnection().setHTML(html.toStdString());
         return editor;
     }
 

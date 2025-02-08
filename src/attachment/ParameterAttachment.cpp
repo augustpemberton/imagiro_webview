@@ -5,8 +5,8 @@
 #include "ParameterAttachment.h"
 #include <imagiro_processor/imagiro_processor.h>
 
-imagiro::ParameterAttachment::ParameterAttachment(imagiro::WebProcessor &p, imagiro::WebViewManager &w)
-        : WebUIAttachment(p, w) {
+imagiro::ParameterAttachment::ParameterAttachment(UIConnection &w, Processor& p)
+        : UIAttachment(w), processor(p) {
 }
 
 void imagiro::ParameterAttachment::addListeners() {
@@ -22,7 +22,7 @@ imagiro::ParameterAttachment::~ParameterAttachment() {
 }
 
 void imagiro::ParameterAttachment::addBindings() {
-    webViewManager.bind(
+    connection.bind(
             "juce_incrementPluginParameter",
             [&](const choc::value::ValueView &args) -> choc::value::Value {
                 auto paramID = args[0].getWithDefault("");
@@ -58,7 +58,7 @@ void imagiro::ParameterAttachment::addBindings() {
 
                 return choc::value::Value(param->getValue());
             });
-    webViewManager.bind(
+    connection.bind(
             "juce_updatePluginParameter",
             [&](const choc::value::ValueView &args) -> choc::value::Value {
                 auto paramID = args[0].getWithDefault("");
@@ -72,7 +72,7 @@ void imagiro::ParameterAttachment::addBindings() {
 
                 return choc::value::Value(param->getValue());
             });
-    webViewManager.bind(
+    connection.bind(
             "juce_setPluginParameterLocked",
             [&](const choc::value::ValueView &args) -> choc::value::Value {
                 auto uid = args[0].getWithDefault("");
@@ -85,14 +85,14 @@ void imagiro::ParameterAttachment::addBindings() {
                 return {};
             });
 
-    webViewManager.bind(
+    connection.bind(
             "juce_startPluginParameterGesture",
             [&](const choc::value::ValueView &args) -> choc::value::Value {
                 auto param = processor.getParameter(args[0].toString());
                 if (param) param->beginUserAction();
                 return {};
             });
-    webViewManager.bind(
+    connection.bind(
             "juce_endPluginParameterGesture",
             [&](const choc::value::ValueView &args) -> choc::value::Value {
                 auto param = processor.getParameter(args[0].toString());
@@ -100,13 +100,13 @@ void imagiro::ParameterAttachment::addBindings() {
                 return {};
             });
 
-    webViewManager.bind(
+    connection.bind(
             "juce_getPluginParameters",
             [&](const choc::value::ValueView &args) -> choc::value::Value {
                 return getAllParameterSpecValue();
             });
 
-    webViewManager.bind(
+    connection.bind(
             "juce_getUserValue",
             [&](const choc::value::ValueView &args) -> choc::value::Value {
                 auto param = processor.getParameter(args[0].toString());
@@ -116,7 +116,7 @@ void imagiro::ParameterAttachment::addBindings() {
                 return choc::value::Value(uv);
             });
 
-    webViewManager.bind(
+    connection.bind(
             "juce_getDisplayValue",
             [&](const choc::value::ValueView &args) -> choc::value::Value {
                 auto param = processor.getParameter(args[0].toString());
@@ -136,7 +136,7 @@ void imagiro::ParameterAttachment::addBindings() {
                 return val;
             });
 
-    webViewManager.bind(
+    connection.bind(
             "juce_textToValue01",
             [&](const choc::value::ValueView &args) -> choc::value::Value {
                 auto paramID = juce::String(args[0].toString());
@@ -149,7 +149,7 @@ void imagiro::ParameterAttachment::addBindings() {
                 return choc::value::Value(val01);
             });
 
-    webViewManager.bind(
+    connection.bind(
             "juce_setDisplayValue",
             [&](const choc::value::ValueView &args) -> choc::value::Value {
                 auto paramID = juce::String(args[0].toString());
@@ -164,7 +164,7 @@ void imagiro::ParameterAttachment::addBindings() {
             }
     );
 
-    webViewManager.bind(
+    connection.bind(
             "juce_setConfig",
             [&](const choc::value::ValueView &args) -> choc::value::Value {
                 auto paramID = juce::String(args[0].toString());
@@ -180,7 +180,7 @@ void imagiro::ParameterAttachment::addBindings() {
     );
 
 
-    webViewManager.bind("juce_setParameterJitter", [&](const choc::value::ValueView &args) -> choc::value::Value {
+    connection.bind("juce_setParameterJitter", [&](const choc::value::ValueView &args) -> choc::value::Value {
         auto paramID = juce::String(args[0].toString());
         auto jitterAmount = args[1].getWithDefault(0.f);
 
@@ -199,16 +199,9 @@ void imagiro::ParameterAttachment::parameterChanged(imagiro::Parameter *param) {
 }
 
 void imagiro::ParameterAttachment::sendStateToBrowser(imagiro::Parameter *param) {
-    auto uid = param->getUID();
-    auto value = param->getValue();
-
-    std::string s = "window.ui.updateParameterState(";
-    s += "\""  + uid + "\"";
-    s += ", ";
-    s += std::to_string(value);
-    s += ")";
-
-    this->webViewManager.evaluateJavascript(s);
+    auto uid = choc::value::Value(param->getUID());
+    auto value = choc::value::Value(param->getValue());
+    connection.eval("window.ui.updateParameterState", {uid, value});
 }
 
 choc::value::Value imagiro::ParameterAttachment::getAllParameterSpecValue() {
@@ -220,8 +213,7 @@ choc::value::Value imagiro::ParameterAttachment::getAllParameterSpecValue() {
 }
 
 void imagiro::ParameterAttachment::configChanged(imagiro::Parameter *param) {
-    this->webViewManager.evaluateJavascript("window.ui.onParameterConfigChanged("
-                                            + choc::json::toString(getParameterSpecValue(param)) + ")");
+    connection.eval("window.ui.onParameterConfigChanged", {getParameterSpecValue(param)});
 }
 
 choc::value::Value imagiro::ParameterAttachment::getParameterSpecValue(imagiro::Parameter *param) {

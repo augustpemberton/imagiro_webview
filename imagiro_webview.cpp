@@ -1,3 +1,3 @@
-#include "src/WebProcessor.cpp"
+#include "src/connection/web/WebProcessor.cpp"
 #include "src/attachment/ParameterAttachment.cpp"
-#include "src/WebViewManager.cpp"
+#include "src/connection/web/WebUIConnection.cpp"

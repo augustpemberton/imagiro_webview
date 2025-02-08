@@ -3,17 +3,17 @@
 //
 
 #pragma once
-#include "WebUIAttachment.h"
+#include "UIAttachment.h"
 #include <imagiro_processor/imagiro_processor.h>
 #include <imagiro_util/imagiro_util.h>
 
 namespace imagiro {
-class PresetAttachment : public WebUIAttachment, public Processor::PresetListener, public FileSystemWatcher::Listener {
+class PresetAttachment : public UIAttachment, public Processor::PresetListener, public FileSystemWatcher::Listener {
     public:
-        using WebUIAttachment::WebUIAttachment;
+        using UIAttachment::UIAttachment;
 
-        PresetAttachment(WebProcessor& processor, WebViewManager& manager)
-                : WebUIAttachment(processor, manager)
+        PresetAttachment(UIConnection& connection, Processor& p)
+                : UIAttachment(connection), processor(p)
         {
             watcher.addFolder(resources->getPresetsFolder());
             watcher.addListener(this);
@@ -29,7 +29,7 @@ class PresetAttachment : public WebUIAttachment, public Processor::PresetListene
         void folderChanged(const juce::File) override {
             std::lock_guard g (fileActionMutex);
             resources->reloadPresets(&processor);
-            webViewManager.evaluateJavascript("window.ui.reloadPresets()");
+            connection.eval("window.ui.reloadPresets");
         }
 
         void addListeners() override {
@@ -37,14 +37,14 @@ class PresetAttachment : public WebUIAttachment, public Processor::PresetListene
         }
 
         void addBindings() override {
-            webViewManager.bind(
+            connection.bind(
                     "juce_getActivePreset",
                     [&](const choc::value::ValueView &args) -> choc::value::Value {
                         if (!processor.lastLoadedPreset) return {};
                         return processor.lastLoadedPreset->getUIState();
                     }
             );
-            webViewManager.bind(
+            connection.bind(
                     "juce_getAvailablePresets",
                     [&](const choc::value::ValueView &args) -> choc::value::Value {
                         auto reloadCache = args[0].getWithDefault(false);
@@ -63,7 +63,7 @@ class PresetAttachment : public WebUIAttachment, public Processor::PresetListene
                     }
             );
 
-            webViewManager.bind(
+            connection.bind(
                     "juce_createPreset",
                     [&](const choc::value::ValueView &args) -> choc::value::Value {
                         auto name = args[0].toString();
@@ -72,13 +72,13 @@ class PresetAttachment : public WebUIAttachment, public Processor::PresetListene
                         auto preset = processor.createPreset(name, false);
                         preset.setDescription(description);
                         auto fbp = FileBackedPreset::save(preset, category);
-                        webViewManager.evaluateJavascript("window.ui.reloadPresets()");
+                        connection.eval("window.ui.reloadPresets");
                         processor.queuePreset(fbp, true);
                         return {};
                     }
             );
 
-            webViewManager.bind(
+            connection.bind(
                     "juce_getCurrentSettingsAsPreset",
                     [&](const choc::value::ValueView &args) -> choc::value::Value {
                         auto time = juce::Time::getCurrentTime();
@@ -94,7 +94,7 @@ class PresetAttachment : public WebUIAttachment, public Processor::PresetListene
                         return preset.getUIState();
                     }
             );
-            webViewManager.bind(
+            connection.bind(
                     "juce_loadPresetFromString",
                     [&](const choc::value::ValueView &args) -> choc::value::Value {
                         auto preset = Preset::fromState(args[0]);
@@ -104,7 +104,7 @@ class PresetAttachment : public WebUIAttachment, public Processor::PresetListene
             );
 
 
-            webViewManager.bind(
+            connection.bind(
                     "juce_deletePreset",
                     [&](const choc::value::ValueView &args) -> choc::value::Value {
                         auto relpath = args[0].toString();
@@ -117,7 +117,7 @@ class PresetAttachment : public WebUIAttachment, public Processor::PresetListene
                     }
             );
 
-            webViewManager.bind(
+            connection.bind(
                     "juce_favoritePreset",
                     [&](const choc::value::ValueView &args) -> choc::value::Value {
                         auto relpath = args[0].toString();
@@ -132,7 +132,7 @@ class PresetAttachment : public WebUIAttachment, public Processor::PresetListene
                     }
             );
 
-            webViewManager.bind(
+            connection.bind(
                     "juce_loadPreset",
                     [&](const choc::value::ValueView &args) -> choc::value::Value {
                         auto relpath = args[0].toString();
@@ -145,7 +145,7 @@ class PresetAttachment : public WebUIAttachment, public Processor::PresetListene
                     }
             );
 
-            webViewManager.bind(
+            connection.bind(
                     "juce_nextPreset",
                     [&](const choc::value::ValueView &args) -> choc::value::Value {
                         auto presetsList = resources->getPresetsList();
@@ -161,7 +161,7 @@ class PresetAttachment : public WebUIAttachment, public Processor::PresetListene
                         return {};
                     }
             );
-            webViewManager.bind(
+            connection.bind(
                     "juce_prevPreset",
                     [&](const choc::value::ValueView &args) -> choc::value::Value {
                         auto presetsList = resources->getPresetsList();
@@ -178,13 +178,13 @@ class PresetAttachment : public WebUIAttachment, public Processor::PresetListene
                     }
             );
 
-            webViewManager.bind("juce_revealPresetsFolder",
+            connection.bind("juce_revealPresetsFolder",
             [&](const choc::value::ValueView& args) -> choc::value::Value {
                 resources->getPresetsFolder().revealToUser();
                 return {};
             });
 
-            webViewManager.bind(
+            connection.bind(
                     "juce_hasPresetBeenUpdated",
                     [&](const choc::value::ValueView &args) -> choc::value::Value {
                         return choc::value::Value(false); // perfomance
@@ -214,7 +214,7 @@ class PresetAttachment : public WebUIAttachment, public Processor::PresetListene
                     }
             );
 
-            webViewManager.bind(
+            connection.bind(
                     "juce_setDefaultPreset",
                     [&](const choc::value::ValueView &args) -> choc::value::Value {
                         auto relpath = args[0].toString();
@@ -232,7 +232,7 @@ class PresetAttachment : public WebUIAttachment, public Processor::PresetListene
                         return {};
                     });
 
-            webViewManager.bind(
+            connection.bind(
                     "juce_clearDefaultPreset",
                     [&](const choc::value::ValueView &args) -> choc::value::Value {
                         resources->getConfigFile()->removeValue("defaultPresetPath");
@@ -241,7 +241,7 @@ class PresetAttachment : public WebUIAttachment, public Processor::PresetListene
                         return {};
                     });
 
-            webViewManager.bind(
+            connection.bind(
                     "juce_getDefaultPreset",
                     [&](const choc::value::ValueView &args) -> choc::value::Value {
                         auto path = resources->getConfigFile()->getValue("defaultPresetPath", "").toStdString();
@@ -253,7 +253,7 @@ class PresetAttachment : public WebUIAttachment, public Processor::PresetListene
                     });
 
 
-            webViewManager.bind("juce_revealPreset",
+            connection.bind("juce_revealPreset",
                     [&](const choc::value::ValueView& args) -> choc::value::Value {
                         auto relpath = args[0].toString();
                         auto presetFile = resources->getPresetsFolder().getChildFile(relpath);
@@ -264,10 +264,11 @@ class PresetAttachment : public WebUIAttachment, public Processor::PresetListene
         }
 
         void OnPresetChange(Preset &preset) override {
-            webViewManager.evaluateJavascript("window.ui.presetChanged()");
+            connection.eval("window.ui.presetChanged");
         }
 
     private:
+        Processor& processor;
         juce::SharedResourcePointer<Resources> resources;
         FileSystemWatcher watcher;
     };

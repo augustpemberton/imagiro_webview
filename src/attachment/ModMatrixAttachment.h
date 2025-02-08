@@ -3,17 +3,16 @@
 //
 
 #pragma once
-#include "WebUIAttachment.h"
-#include "../WebProcessor.h"
+#include "UIAttachment.h"
 
 namespace imagiro {
 
-    class ModMatrixAttachment : public WebUIAttachment, ModMatrix::Listener, juce::Timer {
+    class ModMatrixAttachment : public UIAttachment, ModMatrix::Listener, juce::Timer {
     private:
 
     public:
-        ModMatrixAttachment(WebProcessor& p, ModMatrix& matrix)
-                : WebUIAttachment(p, p.getWebViewManager()), modMatrix(matrix)
+        ModMatrixAttachment(UIConnection& connection, ModMatrix& matrix)
+                : UIAttachment(connection), modMatrix(matrix)
         {
             modMatrix.addListener(this);
             startTimerHz(30);
@@ -28,7 +27,7 @@ namespace imagiro {
         }
 
         void addBindings() override {
-            webViewManager.bind("juce_updateModulation", [&](const choc::value::ValueView& args) -> choc::value::Value {
+            connection.bind("juce_updateModulation", [&](const choc::value::ValueView& args) -> choc::value::Value {
                 auto sourceID = args[0].getWithDefault(0u);
                 auto targetID = args[1].getWithDefault(0u);
                 auto depth = args[2].getWithDefault(0.f);
@@ -40,7 +39,7 @@ namespace imagiro {
                 return {};
             });
 
-            webViewManager.bind("juce_removeModulation", [&](const choc::value::ValueView& args) -> choc::value::Value {
+            connection.bind("juce_removeModulation", [&](const choc::value::ValueView& args) -> choc::value::Value {
                 auto sourceID = args[0].getWithDefault(0u);
                 auto targetID = args[1].getWithDefault(0u);
 
@@ -48,11 +47,11 @@ namespace imagiro {
                 return {};
             });
 
-            webViewManager.bind("juce_getModMatrix", [&](const choc::value::ValueView& args) -> choc::value::Value {
+            connection.bind("juce_getModMatrix", [&](const choc::value::ValueView& args) -> choc::value::Value {
                 return matrixMessageThread.getState();
             });
 
-            webViewManager.bind("juce_getSourceNames", [&](const choc::value::ValueView& args) -> choc::value::Value {
+            connection.bind("juce_getSourceNames", [&](const choc::value::ValueView& args) -> choc::value::Value {
                 auto namesValue = choc::value::createObject("SourceNames");
                 for (const auto& [sourceID, name] : modMatrix.getSourceNames()) {
                     namesValue.setMember(std::to_string(sourceID), name);
@@ -60,7 +59,7 @@ namespace imagiro {
                 return namesValue;
             });
 
-            webViewManager.bind("juce_getTargetNames", [&](const choc::value::ValueView& args) -> choc::value::Value {
+            connection.bind("juce_getTargetNames", [&](const choc::value::ValueView& args) -> choc::value::Value {
                 auto namesValue = choc::value::createObject("TargetNames");
                 for (const auto& [targetID, name] : modMatrix.getTargetNames()) {
                     namesValue.setMember(std::to_string(targetID), name);
@@ -68,7 +67,7 @@ namespace imagiro {
                 return namesValue;
             });
 
-            webViewManager.bind("juce_getSourceValues", [&](const choc::value::ValueView& args) -> choc::value::Value {
+            connection.bind("juce_getSourceValues", [&](const choc::value::ValueView& args) -> choc::value::Value {
                 auto sourcesValue = choc::value::createObject("");
                 for (const auto& [sourceID, source] : sourceValues) {
                     sourcesValue.addMember(std::to_string(sourceID), source.getValue());
@@ -76,7 +75,7 @@ namespace imagiro {
                 return sourcesValue;
             });
 
-            webViewManager.bind("juce_getTargetValues", [&](const choc::value::ValueView& args) -> choc::value::Value {
+            connection.bind("juce_getTargetValues", [&](const choc::value::ValueView& args) -> choc::value::Value {
                 auto targetsValue = choc::value::createObject("");
                 for (const auto& [targetID, target] : targetValues) {
                     const auto v = target.getValue();
@@ -105,13 +104,13 @@ namespace imagiro {
 
             if (sendMatrixUpdateFlag) {
                 auto matrixValue = matrixMessageThread.getState();
-                webViewManager.evaluateJavascript("window.ui.modMatrixUpdated("+choc::json::toString(matrixValue)+")");
+                connection.eval("window.ui.modMatrixUpdated", {matrixValue});
                 sendMatrixUpdateFlag = false;
             }
         }
 
         void OnRecentVoiceUpdated(size_t voiceIndex) override {
-            webViewManager.evaluateJavascript("window.ui.onRecentVoiceUpdated("+std::to_string(voiceIndex)+")");
+            connection.eval("window.ui.onRecentVoiceUpdated", {choc::value::Value((int)voiceIndex)});
         }
 
     private:

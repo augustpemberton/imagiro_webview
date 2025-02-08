@@ -3,6 +3,8 @@
 //
 
 #pragma once
+
+#include "BinaryData.h"
 #include "choc/gui/choc_WebView.h"
 #include <utility>
 #include "AssetServer.h"
@@ -15,23 +17,21 @@ using GetResourceOriginalFilenameFn = std::function<const char*(const char*)>;
 namespace imagiro {
     class BinaryDataAssetServer : public AssetServer {
     public:
-        explicit BinaryDataAssetServer(GetResourceFn getNamedResourceLambda,
-                                       GetResourceOriginalFilenameFn getNamedResourceOriginalFilenameLambda)
-                : getNamedResource(getNamedResourceLambda),
-                  getNamedResourceOriginalFilename(getNamedResourceOriginalFilenameLambda) {}
+        explicit BinaryDataAssetServer()
+                : getNamedResource(BinaryData::getNamedResource),
+                  getNamedResourceOriginalFilename(BinaryData::getNamedResourceOriginalFilename) {}
 
-        std::optional<WebView::Options::Resource> getResource(const choc::ui::WebView::Options::Path& p) override {
+        std::optional<WebView::Options::Resource> getResource(std::string_view path) override {
 //            if (p.starts_with("http")) {
 //                return getWebResource(juce::URL(p));
 //            }
 
-            std::string path = p;
             if (path == "/") {
                 path = "index.html";
             }
 
             if (path.starts_with("/$RES/")) {
-                auto relPath = juce::String(path).replace("/$RES/", "");
+                auto relPath = juce::String(std::string (path)).replace("/$RES/", "");
                 auto file = Resources::getSystemDataFolder().getChildFile("resources")
                                                                  .getChildFile(relPath);
                 if (!file.exists()) {
@@ -46,7 +46,7 @@ namespace imagiro {
                                   getMimeType(file.getFileExtension().toStdString()));
             }
 
-            auto resourceName = juce::String(path)
+            auto resourceName = juce::String(std::string(path))
                     .replace(".", "_")
                     .replace("-", "").toStdString();
 
@@ -111,7 +111,11 @@ namespace imagiro {
             std::string contentRange;
 
             d.assign(reinterpret_cast<const uint8_t*>(&data[0]), reinterpret_cast<const uint8_t*>(&data[size]));
-            return {d, mimeType};
+
+            WebView::Options::Resource r;
+            r.data = d;
+            r.mimeType = mimeType;
+            return r;
         }
 //
 //        WebView::Options::Resource toResource(juce::String data, const std::string& mimeType,

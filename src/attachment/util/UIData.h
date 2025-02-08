@@ -4,18 +4,18 @@
 
 #pragma once
 
-struct WebviewDataValue {
+struct UIDataValue {
     std::string value;
     bool saveInPreset {false};
 
     choc::value::Value getState() {
-        auto val = choc::value::createObject("WebviewDataValue");
+        auto val = choc::value::createObject("UIDataValue");
         val.setMember("value", value);
         return val;
     }
 
-    static WebviewDataValue fromState(choc::value::ValueView v, bool isPreset) {
-        WebviewDataValue val;
+    static UIDataValue fromState(choc::value::ValueView v, bool isPreset) {
+        UIDataValue val;
         if (v.isString()) {
             val.value = v.getWithDefault("");
         } else if (v.isObject() && v.hasObjectMember("value")) {
@@ -26,7 +26,7 @@ struct WebviewDataValue {
     }
 };
 
-class WebviewData {
+class UIData {
 public:
 
     void set(std::string key, std::string value, bool saveInPreset) {
@@ -40,7 +40,7 @@ public:
     }
 
     choc::value::Value getState(bool onlyPresetData) {
-        auto vals = choc::value::createObject("WebviewData");
+        auto vals = choc::value::createObject("UIData");
         for (auto& [key, val] : values) {
             if (onlyPresetData && !val.saveInPreset) continue;
             vals.addMember(key, val.getState());
@@ -49,19 +49,19 @@ public:
         return vals;
     }
 
-    static WebviewData fromState(const choc::value::ValueView& v, bool isPreset) {
-        WebviewData d;
+    static UIData fromState(const choc::value::ValueView& v, bool isPreset) {
+        UIData d;
         for (int i=0; i<v.size(); i++) {
             auto val = v.getObjectMemberAt(i);
-            d.values.insert({val.name, WebviewDataValue::fromState(val.value, isPreset)});
+            d.values.insert({val.name, UIDataValue::fromState(val.value, isPreset)});
         }
         return d;
     }
 
 
-    std::map<std::string, WebviewDataValue>& getValues() { return values; };
+    std::map<std::string, UIDataValue>& getValues() { return values; };
 
 private:
-    std::map<std::string, WebviewDataValue> values;
+    std::map<std::string, UIDataValue> values;
 };
 

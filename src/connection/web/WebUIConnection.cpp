@@ -1,22 +1,22 @@
-#include "WebViewManager.h"
+#include "WebUIConnection.h"
 #include "WebUIPluginEditor.h"
 
 namespace imagiro {
-    WebViewManager::WebViewManager(AssetServer &server)
+    WebUIConnection::WebUIConnection(AssetServer &server)
         : server(server), jsEvalQueue(256)
     {
         startTimerHz(60);
     }
 
-    void WebViewManager::addListener(Listener* l) {
+    void WebUIConnection::addListener(Listener* l) {
         listeners.add(l);
     }
 
-    void WebViewManager::removeListener(Listener* l) {
+    void WebUIConnection::removeListener(Listener* l) {
         listeners.remove(l);
     }
 
-    std::shared_ptr<choc::ui::WebView> WebViewManager::getWebView(WebUIPluginEditor* editor) {
+    std::shared_ptr<choc::ui::WebView> WebUIConnection::getWebView(WebUIPluginEditor* editor) {
         if (!preparedWebview) {
             preparedWebview = createWebView();
             setupWebview(*preparedWebview);
@@ -29,7 +29,7 @@ namespace imagiro {
         return activeView;
     }
 
-    std::shared_ptr<choc::ui::WebView> WebViewManager::createWebView() {
+    std::shared_ptr<choc::ui::WebView> WebUIConnection::createWebView() {
 #if JUCE_DEBUG || defined(BETA)
         auto debugMode = true;
 #else
@@ -38,7 +38,7 @@ namespace imagiro {
         try {
             auto view = std::make_shared<choc::ui::WebView>(
                     choc::ui::WebView::Options{
-                            debugMode, true, "",
+                            debugMode, true, true, "",
                             [&](auto& path) {
                                 return server.getResource(path);
                             }
@@ -57,7 +57,7 @@ namespace imagiro {
         }
     }
 
-    void WebViewManager::bindEditorSpecificFunctions(choc::ui::WebView& view, WebUIPluginEditor* editor) {
+    void WebUIConnection::bindEditorSpecificFunctions(choc::ui::WebView& view, WebUIPluginEditor* editor) {
         view.bind("juce_getWindowSize",
                   wrapFn([editor](const choc::value::ValueView &args) -> choc::value::Value {
                       auto dims = choc::value::createObject("WindowSize");
@@ -76,32 +76,43 @@ namespace imagiro {
         );
     }
 
-    void WebViewManager::navigate(const std::string &url) {
+    void WebUIConnection::navigate(const std::string &url) {
         for (auto wv : activeWebViews) wv->navigate(url);
         currentURL = url;
         htmlToSet.reset();
     }
 
-    void WebViewManager::reload() {
+    void WebUIConnection::reload() {
         if (!currentURL.has_value()) return;
         for (auto wv : activeWebViews) wv->navigate(currentURL.value());
     }
 
-    std::string WebViewManager::getCurrentURL() {
+    std::string WebUIConnection::getCurrentURL() {
         return currentURL ? currentURL.value() : "";
     }
 
-    void WebViewManager::setHTML(const std::string &html) {
+    void WebUIConnection::setHTML(const std::string &html) {
         for (auto wv : activeWebViews) wv->setHTML(html);
         htmlToSet = html;
         currentURL = "";
     }
 
-    void WebViewManager::evaluateJavascript(const std::string& js) {
+    void WebUIConnection::evaluateJavascript(const std::string& js) {
         jsEvalQueue.enqueue(choc::json::toString(choc::value::Value(js)));
     }
 
-    void WebViewManager::timerCallback() {
+    void WebUIConnection::eval(const std::string &functionName, const std::vector<choc::value::ValueView>& args) {
+        auto evalString = functionName + "(";
+        for (auto i=0u; i<args.size(); i++) {
+            evalString += choc::json::toString(args[i]);
+            if (i != args.size()-1) evalString += ",";
+        }
+        evalString += ");";
+
+        evaluateJavascript(evalString);
+    }
+
+    void WebUIConnection::timerCallback() {
         std::string js;
         while (jsEvalQueue.try_dequeue(js)) {
             auto evalString = "window.ui.evaluate(" + js + ");";
@@ -109,7 +120,7 @@ namespace imagiro {
         }
     }
 
-    void WebViewManager::bind(const std::string &functionName, choc::ui::WebView::CallbackFn &&fn) {
+    void WebUIConnection::bind(const std::string &functionName, CallbackFn &&fn) {
         choc::ui::WebView::CallbackFn func = wrapFn(fn);
         for (auto wv : activeWebViews) {
             auto funcCopy = func;
@@ -118,7 +129,7 @@ namespace imagiro {
         fnsToBind.emplace_back(functionName, std::move(func));
     }
 
-    choc::ui::WebView::CallbackFn WebViewManager::wrapFn(choc::ui::WebView::CallbackFn func) {
+    choc::ui::WebView::CallbackFn WebUIConnection::wrapFn(choc::ui::WebView::CallbackFn func) {
         return [func](const choc::value::ValueView& args) -> choc::value::Value {
             auto responseState = choc::value::createObject("Response");
             try {
@@ -134,19 +145,19 @@ namespace imagiro {
         };
     }
 
-    void WebViewManager::requestFileChooser(juce::String patternsAllowed) {
+    void WebUIConnection::requestFileChooser(juce::String patternsAllowed) {
         listeners.call(&Listener::fileOpenerRequested, patternsAllowed);
     }
 
-    void WebViewManager::removeWebView(choc::ui::WebView* v) {
+    void WebUIConnection::removeWebView(choc::ui::WebView* v) {
         activeWebViews.removeFirstMatchingValue(v);
     }
 
-    bool WebViewManager::isShowing() {
+    bool WebUIConnection::isShowing() {
         return !activeWebViews.isEmpty();
     }
 
-    void WebViewManager::setupWebview(choc::ui::WebView& wv) {
+    void WebUIConnection::setupWebview(choc::ui::WebView& wv) {
         activeWebViews.add(&wv);
         for (auto& func : fnsToBind) {
             auto funcCopy = func.second;

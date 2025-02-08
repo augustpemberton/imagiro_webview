@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "WebViewManager.h"
+#include "WebUIConnection.h"
 //#include <juce_gui_extra/juce_gui_extra.h> // this causes some compilation issues on windows, not needed
 
 #if JUCE_WINDOWS
@@ -22,7 +22,7 @@ namespace imagiro {
 #endif
     {
     public:
-        ChocBrowserComponent(WebUIPluginEditor& editor, WebViewManager &w) : webViewManager(w) {
+        ChocBrowserComponent(WebUIPluginEditor& editor, WebUIConnection &w) : webViewManager(w) {
             webView = webViewManager.getWebView(&editor);
 
             webView->bind( "juce_setUILoaded",
@@ -57,7 +57,7 @@ namespace imagiro {
 #endif
         }
 
-        WebViewManager &getWebViewManager() { return webViewManager; }
+        WebUIConnection &getWebUIConnection() { return webViewManager; }
 
         void startFadeIn() {
             fadeStartTime = juce::Time::getMillisecondCounter();
@@ -75,7 +75,7 @@ namespace imagiro {
         }
 
     private:
-        WebViewManager &webViewManager;
+        WebUIConnection &webViewManager;
         std::shared_ptr<choc::ui::WebView> webView;
 
         juce::VBlankAttachment vBlankAttachment { this, [&] { update(); } };

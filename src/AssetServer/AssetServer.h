@@ -7,5 +7,5 @@
 class AssetServer {
 public:
     virtual std::optional<choc::ui::WebView::Options::Resource> getResource(
-            const choc::ui::WebView::Options::Path& p) = 0;
+            std::string_view p) = 0;
 };
