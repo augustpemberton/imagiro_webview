@@ -23,15 +23,6 @@ namespace imagiro {
             modMatrix.removeListener(this);
         }
 
-        void timerCallback() override {
-            while (matrixFifo.try_dequeue(matrixMessageThread)) { /**/ }
-
-            if (!sendMatrixUpdateFlag) return;
-            auto matrixValue = matrixMessageThread.getState();
-            webViewManager.evaluateJavascript("window.ui.modMatrixUpdated("+choc::json::toString(matrixValue)+")");
-            sendMatrixUpdateFlag = false;
-        }
-
         void OnMatrixUpdated() override {
             sendMatrixUpdateFlagAfterNextDataLoad = true;
         }
@@ -61,26 +52,37 @@ namespace imagiro {
                 return matrixMessageThread.getState();
             });
 
-            webViewManager.bind("juce_getSources", [&](const choc::value::ValueView& args) -> choc::value::Value {
-                auto namesValue = choc::value::createEmptyArray();
-                for (const auto& [id, name]: modMatrix.getSourceNames()) {
-                    auto nameObj = choc::value::createObject("");
-                    nameObj.addMember("id", (int)id);
-                    nameObj.addMember("name", name);
-                    namesValue.addArrayElement(nameObj);
+            webViewManager.bind("juce_getSourceNames", [&](const choc::value::ValueView& args) -> choc::value::Value {
+                auto namesValue = choc::value::createObject("SourceNames");
+                for (const auto& [sourceID, name] : modMatrix.getSourceNames()) {
+                    namesValue.setMember(std::to_string(sourceID), name);
                 }
                 return namesValue;
             });
 
-            webViewManager.bind("juce_getTargets", [&](const choc::value::ValueView& args) -> choc::value::Value {
-                auto namesValue = choc::value::createEmptyArray();
-                for (const auto& [id, name]: modMatrix.getTargetNames()) {
-                    auto nameObj = choc::value::createObject("");
-                    nameObj.addMember("id", (int)id);
-                    nameObj.addMember("name", name);
-                    namesValue.addArrayElement(nameObj);
+            webViewManager.bind("juce_getTargetNames", [&](const choc::value::ValueView& args) -> choc::value::Value {
+                auto namesValue = choc::value::createObject("TargetNames");
+                for (const auto& [targetID, name] : modMatrix.getTargetNames()) {
+                    namesValue.setMember(std::to_string(targetID), name);
                 }
                 return namesValue;
+            });
+
+            webViewManager.bind("juce_getSourceValues", [&](const choc::value::ValueView& args) -> choc::value::Value {
+                auto sourcesValue = choc::value::createObject("");
+                for (const auto& [sourceID, source] : sourceValues) {
+                    sourcesValue.addMember(std::to_string(sourceID), source.getValue());
+                }
+                return sourcesValue;
+            });
+
+            webViewManager.bind("juce_getTargetValues", [&](const choc::value::ValueView& args) -> choc::value::Value {
+                auto targetsValue = choc::value::createObject("");
+                for (const auto& [targetID, target] : targetValues) {
+                    const auto v = target.getValue();
+                    targetsValue.addMember(std::to_string(targetID), v);
+                }
+                return targetsValue;
             });
         }
 
@@ -91,6 +93,25 @@ namespace imagiro {
                 sendMatrixUpdateFlagAfterNextDataLoad = false;
                 sendMatrixUpdateFlag = true;
             }
+
+            sourceValuesFifo.enqueue(modMatrix.getSourceValues());
+            targetValuesFifo.enqueue(modMatrix.getTargetValues());
+        }
+
+        void timerCallback() override {
+            while (matrixFifo.try_dequeue(matrixMessageThread)) { /**/ }
+            while (sourceValuesFifo.try_dequeue(sourceValues)) { /**/ }
+            while (targetValuesFifo.try_dequeue(targetValues)) { /**/ }
+
+            if (sendMatrixUpdateFlag) {
+                auto matrixValue = matrixMessageThread.getState();
+                webViewManager.evaluateJavascript("window.ui.modMatrixUpdated("+choc::json::toString(matrixValue)+")");
+                sendMatrixUpdateFlag = false;
+            }
+        }
+
+        void OnRecentVoiceUpdated(size_t voiceIndex) override {
+            webViewManager.evaluateJavascript("window.ui.onRecentVoiceUpdated("+std::to_string(voiceIndex)+")");
         }
 
     private:
@@ -102,7 +123,10 @@ namespace imagiro {
         std::atomic<bool> sendMatrixUpdateFlag {false};
         std::atomic<bool> sendMatrixUpdateFlagAfterNextDataLoad {false};
 
-        std::unordered_map<SourceID, float> latestSourceValues;
-        moodycamel::ReaderWriterQueue<std::pair<SourceID, float>> sourceValueFifo {512};
+        std::unordered_map<SourceID, ModMatrix::SourceValue> sourceValues;
+        moodycamel::ReaderWriterQueue<std::unordered_map<SourceID, ModMatrix::SourceValue>> sourceValuesFifo {128};
+
+        std::unordered_map<TargetID, ModMatrix::TargetValue> targetValues;
+        moodycamel::ReaderWriterQueue<std::unordered_map<TargetID, ModMatrix::TargetValue>> targetValuesFifo {128};
     };
 }
