@@ -12,14 +12,19 @@
 
 
 namespace imagiro {
-    struct ClientInstance: public choc::network::HTTPServer::ClientInstance {
-        ClientInstance(AssetServer& s) : server(s) {
-
+    struct ClientInstance: public choc::network::HTTPServer::ClientInstance, juce::Timer {
+        ClientInstance(AssetServer& s, std::unordered_map<std::string, UIConnection::CallbackFn>& fns)
+        : functions(fns), assetServer(s)
+        {
+            startTimerHz(60);
+        }
+        ~ClientInstance() {
+            stopTimer();
         }
 
         choc::network::HTTPContent getHTTPContent(std::string_view requestedPath) override {
             choc::network::HTTPContent content;
-            auto resource = server.getResource(requestedPath);
+            auto resource = assetServer.getResource(requestedPath);
             if (!resource) return content;
 
             content.mimeType = resource->mimeType;
@@ -27,9 +32,43 @@ namespace imagiro {
             return content;
         }
 
-        void handleWebSocketMessage(std::string_view message) override {
-            DBG("message received ");
-            DBG(std::string(message));
+        void handleWebSocketMessage(std::string_view messageString) override {
+            auto message = choc::json::parse(messageString);
+            auto id = message["id"].getWithDefault("");
+            auto functionName = message["functionName"].getWithDefault("");
+            auto args = choc::value::Value(message["args"]);
+
+            functionRequestFifo.enqueue({
+                id,
+                functionName,
+                args
+            });
+        }
+
+        void timerCallback() override {
+            FunctionRequest request;
+            while (functionRequestFifo.try_dequeue(request)) {
+                auto function = functions.find(request.functionName);
+
+                auto resultMessage = choc::value::createObject("Message");
+                resultMessage.addMember("type", 1); // 1 for FunctionResponse
+                resultMessage.addMember("id", request.requestID);
+
+                if (function == functions.end()) {
+                    resultMessage.setMember("type", 2); // 2 for FunctionResponseError
+                    resultMessage.addMember("result", "unable to find function " + request.functionName);
+                } else {
+                    try {
+                        auto result = function->second(request.args);
+                        resultMessage.addMember("result", result);
+                    } catch (std::exception& e) {
+                        resultMessage.setMember("type", 2); // 2 for FunctionResponseError
+                        resultMessage.addMember("result", e.what());
+                    }
+                }
+
+                sendWebSocketMessage(choc::json::toString(resultMessage));
+            }
         }
 
         void upgradedToWebSocket(std::string_view path) override {
@@ -37,9 +76,16 @@ namespace imagiro {
         }
 
     private:
-        AssetServer& server;
-    };
+        std::unordered_map<std::string, UIConnection::CallbackFn>& functions;
+        AssetServer& assetServer;
 
+        struct FunctionRequest {
+            std::string requestID;
+            std::string functionName;
+            choc::value::Value args;
+        };
+        moodycamel::ReaderWriterQueue<FunctionRequest> functionRequestFifo {1024};
+    };
 
     class SocketUIConnection : public UIConnection {
     public:
@@ -47,9 +93,10 @@ namespace imagiro {
                 : assetServer(s)
         {
             auto serverPointer = &this->assetServer;
+            auto fnsPointer = &this->boundFunctions;
             bool openedOk = server.open(address, port, 0,
-                                        [serverPointer] {
-                                            return std::make_unique<ClientInstance>(*serverPointer);
+                                        [serverPointer, fnsPointer] {
+                                            return std::make_unique<ClientInstance>(*serverPointer, *fnsPointer);
                                         },
                                         [](const std::string& error) {
                                             DBG(error);
@@ -57,11 +104,13 @@ namespace imagiro {
 
             if (!openedOk) {
                 DBG("unable to open web server");
+            } else {
+                DBG(server.getWebSocketAddress());
             }
         }
 
         void bind(const std::string &functionName, CallbackFn&& callback) override {
-            //
+            boundFunctions.insert({functionName, callback});
         }
 
         void eval(const std::string &functionName, const std::vector<choc::value::ValueView> &args) override {
@@ -71,5 +120,7 @@ namespace imagiro {
     private:
         choc::network::HTTPServer server;
         AssetServer& assetServer;
+
+        std::unordered_map<std::string, CallbackFn> boundFunctions;
     };
 }

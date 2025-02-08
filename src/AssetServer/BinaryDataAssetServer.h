@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include "BinaryData.h"
 #include "choc/gui/choc_WebView.h"
 #include <utility>
 #include "AssetServer.h"
@@ -17,9 +16,9 @@ using GetResourceOriginalFilenameFn = std::function<const char*(const char*)>;
 namespace imagiro {
     class BinaryDataAssetServer : public AssetServer {
     public:
-        explicit BinaryDataAssetServer()
-                : getNamedResource(BinaryData::getNamedResource),
-                  getNamedResourceOriginalFilename(BinaryData::getNamedResourceOriginalFilename) {}
+        explicit BinaryDataAssetServer(GetResourceFn fn1, GetResourceOriginalFilenameFn fn2)
+                : getNamedResource(fn1),
+                  getNamedResourceOriginalFilename(fn2) {}
 
         std::optional<WebView::Options::Resource> getResource(std::string_view path) override {
 //            if (p.starts_with("http")) {
