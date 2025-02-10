@@ -12,4 +12,5 @@
 #endif
 
 #include "src/connection/SocketUIConnection.h"
+#include "src/connection/DummyUIConnection.h"
 #include "src/ConnectedProcessor.h"

@@ -40,7 +40,15 @@ namespace imagiro {
                     choc::ui::WebView::Options{
                             debugMode, true, true, "",
                             [&](auto& path) {
-                                return server.getResource(path);
+                                std::optional<choc::ui::WebView::Options::Resource> r2 {};
+                                auto r = server.getResource(path);
+                                if (r) {
+                                    r2 = choc::ui::WebView::Options::Resource();
+                                    r2->data = r->data;
+                                    r2->mimeType = r->mimeType;
+                                }
+
+                                return r2;
                             }
                     }
             );
