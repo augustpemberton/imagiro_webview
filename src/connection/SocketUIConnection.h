@@ -4,7 +4,7 @@
 
 #pragma once
 #include <choc/network/choc_HTTPServer.h>
-#include <choc/gui/choc_WebView.h>
+// #include <choc/gui/choc_WebView.h>
 #include <juce_core/juce_core.h>
 
 #include "UIConnection.h"

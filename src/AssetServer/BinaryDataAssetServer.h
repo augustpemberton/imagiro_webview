@@ -4,12 +4,12 @@
 
 #pragma once
 
-#include "choc/gui/choc_WebView.h"
+// #include "choc/gui/choc_WebView.h"
 #include <utility>
 #include "AssetServer.h"
 #include <imagiro_processor/imagiro_processor.h>
 
-using choc::ui::WebView;
+// using choc::ui::WebView;
 using GetResourceFn = std::function<const char*(const char*, int&)>;
 using GetResourceOriginalFilenameFn = std::function<const char*(const char*)>;
 
@@ -20,7 +20,7 @@ namespace imagiro {
                 : getNamedResource(fn1),
                   getNamedResourceOriginalFilename(fn2) {}
 
-        std::optional<WebView::Options::Resource> getResource(std::string_view path) override {
+        std::optional<Resource> getResource(std::string_view path) override {
 //            if (p.starts_with("http")) {
 //                return getWebResource(juce::URL(p));
 //            }
@@ -105,13 +105,13 @@ namespace imagiro {
             return "application/octet-stream";
         }
 
-        WebView::Options::Resource toResource(const char* data, unsigned int size, const std::string& mimeType) {
+        Resource toResource(const char* data, unsigned int size, const std::string& mimeType) {
             std::vector<uint8_t> d;
             std::string contentRange;
 
             d.assign(reinterpret_cast<const uint8_t*>(&data[0]), reinterpret_cast<const uint8_t*>(&data[size]));
 
-            WebView::Options::Resource r;
+            Resource r;
             r.data = d;
             r.mimeType = mimeType;
             return r;

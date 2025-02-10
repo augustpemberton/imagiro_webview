@@ -5,7 +5,6 @@
 #pragma once
 
 #include "WebUIConnection.h"
-//#include <juce_gui_extra/juce_gui_extra.h> // this causes some compilation issues on windows, not needed
 
 #if JUCE_WINDOWS
 #include "WinKeypressWorkaround.h"
