@@ -4,7 +4,6 @@
 
 #pragma once
 #include <choc/network/choc_HTTPServer.h>
-// #include <choc/gui/choc_WebView.h>
 #include <juce_core/juce_core.h>
 
 #include "UIConnection.h"
@@ -20,9 +19,12 @@ namespace imagiro
         {
         }
 
-        ~ClientInstance() override { }
+        ~ClientInstance() override
+        {
+        }
 
-        choc::network::HTTPContent getHTTPContent(std::string_view requestedPath) override {
+        choc::network::HTTPContent getHTTPContent(std::string_view requestedPath) override
+        {
             choc::network::HTTPContent content;
             auto resource = assetServer.getResource(requestedPath);
             if (!resource) return content;
@@ -37,8 +39,8 @@ namespace imagiro
             try
             {
                 const auto message = choc::json::parse(messageString);
-                auto id = message["id"].getWithDefault("");
-                auto functionName = message["functionName"].getWithDefault("");
+                auto id = std::string(message["id"].getWithDefault(""));
+                auto functionName = std::string(message["functionName"].getWithDefault(""));
                 auto args = choc::value::Value(message["args"]);
 
                 // Capture necessary data and dispatch to message thread
@@ -48,30 +50,22 @@ namespace imagiro
                     resultMessage.addMember("type", 1);
                     resultMessage.addMember("id", id);
 
-                    try
-                    {
-                        const auto function = functions.find(functionName);
-                        if (function == functions.end())
-                        {
-                            resultMessage.setMember("type", 2);
-                            resultMessage.addMember("result", "unable to find function " + std::string(functionName));
-                        }
-                        else
-                        {
-                            auto result = function->second(args);
-                            resultMessage.addMember("result", result);
-                        }
-                    }
-                    catch (const std::exception& e)
+                    const auto function = functions.find(functionName);
+                    if (function == functions.end())
                     {
                         resultMessage.setMember("type", 2);
-                        resultMessage.addMember("result", e.what());
+                        resultMessage.addMember("result", "unable to find function " + std::string(functionName));
+                    }
+                    else
+                    {
+                        auto result = function->second(args);
+                        resultMessage.addMember("result", result);
                     }
 
                     sendWebSocketMessage(choc::json::toString(resultMessage));
                 });
             }
-            catch (const std::exception& e)
+            catch (const choc::value::Error& e)
             {
                 DBG("Error handling WebSocket message: " << e.what());
             }
@@ -95,7 +89,7 @@ namespace imagiro
         {
             auto serverPointer = &this->assetServer;
             auto fnsPointer = &this->boundFunctions;
-            bool openedOk = server.open(address, port, 0,
+            bool openedOk = server.open(address, port, 1,
                                         [this, serverPointer, fnsPointer]
                                         {
                                             auto client = std::make_shared<ClientInstance>(*serverPointer, *fnsPointer);
@@ -109,10 +103,12 @@ namespace imagiro
                                         {
                                             DBG(error);
                                         });
-            if (openedOk) {
+            if (openedOk)
+            {
                 DBG(server.getWebSocketAddress());
             }
-            else {
+            else
+            {
                 DBG("unable to open web server");
             }
 
@@ -126,39 +122,58 @@ namespace imagiro
 
         void timerCallback() override
         {
-            std::string js;
-            while (jsEvalQueue.try_dequeue(js))
+            try
             {
-                auto evalMessage = choc::value::createObject("Message");
-                evalMessage.addMember("type", 3); // 3 = Evaluate
-                evalMessage.addMember("js", js);
-
-                const auto evalString = choc::json::toString(evalMessage);
-
-                std::lock_guard l(activeClientsLock);
-
-                std::erase_if(activeClients, [](const std::weak_ptr<ClientInstance>& client) {
-                    return client.expired();
-                });
-
-                for (const auto& client : activeClients)
+                std::string js;
+                while (jsEvalQueue.try_dequeue(js))
                 {
-                    if (auto c = client.lock()) c->sendWebSocketMessage(evalString);
+                    auto evalMessage = choc::value::createObject("Message");
+                    evalMessage.addMember("type", 3); // 3 = Evaluate
+                    evalMessage.addMember("js", js);
+
+                    const auto evalString = choc::json::toString(evalMessage);
+
+                    std::lock_guard l(activeClientsLock);
+
+                    std::erase_if(activeClients, [](const std::weak_ptr<ClientInstance>& client)
+                    {
+                        return client.expired();
+                    });
+
+                    for (const auto& client : activeClients)
+                    {
+                        if (auto c = client.lock()) c->sendWebSocketMessage(evalString);
+                    }
                 }
+            }
+            catch (choc::value::Error& e)
+            {
+                DBG(e.what());
             }
         }
 
-        void eval(const std::string& functionName, const std::vector<choc::value::ValueView>& args) override
+        void eval(const std::string& functionName, const std::vector<choc::value::Value>& args) override
         {
-            auto js = functionName + "(";
-            for (auto i = 0u; i < args.size(); i++)
+            try
             {
-                js += choc::json::toString(args[i]);
-                if (i != args.size() - 1) js += ",";
-            }
-            js += ");";
+                auto js = functionName + "(";
+                for (auto i = 0u; i < args.size(); i++)
+                {
+                    js += choc::json::toString(args[i]);
+                    if (i != args.size() - 1) js += ",";
+                }
+                js += ");";
 
-            jsEvalQueue.enqueue(choc::json::toString(choc::value::Value(js)));
+                jsEvalQueue.enqueue(js);
+            }
+            catch (choc::value::Error& e)
+            {
+                DBG("E" + juce::String(e.what()));
+                for (auto i = 0u; i < args.size(); i++)
+                {
+                    DBG(args[i].toString());
+                }
+            }
         }
 
     private:
@@ -170,6 +185,6 @@ namespace imagiro
         moodycamel::ConcurrentQueue<std::string> jsEvalQueue{512};
 
         std::mutex activeClientsLock;
-        std::vector<std::weak_ptr<ClientInstance>> activeClients {};
+        std::vector<std::weak_ptr<ClientInstance>> activeClients{};
     };
 }

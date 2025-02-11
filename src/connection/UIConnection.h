@@ -13,6 +13,6 @@ namespace imagiro {
         typedef std::function<choc::value::Value(const choc::value::ValueView &args)> CallbackFn;
 
         virtual void bind(const std::string &functionName, CallbackFn&& callback) = 0;
-        virtual void eval(const std::string &functionName, const std::vector<choc::value::ValueView>& args = {}) = 0;
+        virtual void eval(const std::string &functionName, const std::vector<choc::value::Value>& args = {}) = 0;
     };
 }

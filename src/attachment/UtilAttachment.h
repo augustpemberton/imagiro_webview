@@ -55,7 +55,10 @@ namespace imagiro {
 
                         uiData.set(key, value, saveInPreset);
 
-                        connection.eval("window.ui.processorValueUpdated", {args[0], args[1]});
+                        connection.eval("window.ui.processorValueUpdated", {
+                            choc::value::Value{args[0]},
+                            choc::value::Value{args[1]}
+                        });
                         return {};
                     });
 
@@ -92,7 +95,10 @@ namespace imagiro {
                         }
 
                         configFile->save();
-                        connection.eval("window.ui.configValueUpdated", {args[0], args[1]});
+                        connection.eval("window.ui.configValueUpdated", {
+                            choc::value::Value(args[0]),
+                            choc::value::Value(args[1])
+                        });
                         return {};
                     }
             );
@@ -144,8 +150,8 @@ namespace imagiro {
             connection.bind("juce_emitSignal", [&](const choc::value::ValueView& args) -> choc::value::Value {
                 auto signalName = std::string(args[0].getWithDefault(""));
 
-                std::vector<choc::value::ValueView> v;
-                if (args.size() > 1) v.push_back(args[1]);
+                std::vector<choc::value::Value> v;
+                if (args.size() > 1) v.push_back(choc::value::Value(args[1]));
                 connection.eval("window.ui.onSignal", v);
                 return {};
             });
