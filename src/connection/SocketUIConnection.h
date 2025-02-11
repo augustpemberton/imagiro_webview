@@ -11,16 +11,16 @@
 #include "../AssetServer/AssetServer.h"
 
 
-namespace imagiro {
-    struct ClientInstance: public choc::network::HTTPServer::ClientInstance, juce::Timer {
+namespace imagiro
+{
+    struct ClientInstance : public choc::network::HTTPServer::ClientInstance
+    {
         ClientInstance(AssetServer& s, std::unordered_map<std::string, UIConnection::CallbackFn>& fns)
-        : functions(fns), assetServer(s)
+            : functions(fns), assetServer(s)
         {
-            startTimerHz(60);
         }
-        ~ClientInstance() {
-            stopTimer();
-        }
+
+        ~ClientInstance() override { }
 
         choc::network::HTTPContent getHTTPContent(std::string_view requestedPath) override {
             choc::network::HTTPContent content;
@@ -32,89 +32,133 @@ namespace imagiro {
             return content;
         }
 
-        void handleWebSocketMessage(std::string_view messageString) override {
-            auto message = choc::json::parse(messageString);
-            auto id = message["id"].getWithDefault("");
-            auto functionName = message["functionName"].getWithDefault("");
-            auto args = choc::value::Value(message["args"]);
+        void handleWebSocketMessage(const std::string_view messageString) override
+        {
+            try
+            {
+                const auto message = choc::json::parse(messageString);
+                auto id = message["id"].getWithDefault("");
+                auto functionName = message["functionName"].getWithDefault("");
+                auto args = choc::value::Value(message["args"]);
 
-            functionRequestFifo.enqueue({
-                id,
-                functionName,
-                args
-            });
-        }
+                // Capture necessary data and dispatch to message thread
+                juce::MessageManager::callAsync([this, id, functionName, args]()
+                {
+                    auto resultMessage = choc::value::createObject("Message");
+                    resultMessage.addMember("type", 1);
+                    resultMessage.addMember("id", id);
 
-        void timerCallback() override {
-            FunctionRequest request;
-            while (functionRequestFifo.try_dequeue(request)) {
-                auto function = functions.find(request.functionName);
-
-                auto resultMessage = choc::value::createObject("Message");
-                resultMessage.addMember("type", 1); // 1 for FunctionResponse
-                resultMessage.addMember("id", request.requestID);
-
-                if (function == functions.end()) {
-                    resultMessage.setMember("type", 2); // 2 for FunctionResponseError
-                    resultMessage.addMember("result", "unable to find function " + request.functionName);
-                } else {
-                    try {
-                        auto result = function->second(request.args);
-                        resultMessage.addMember("result", result);
-                    } catch (std::exception& e) {
-                        resultMessage.setMember("type", 2); // 2 for FunctionResponseError
+                    try
+                    {
+                        const auto function = functions.find(functionName);
+                        if (function == functions.end())
+                        {
+                            resultMessage.setMember("type", 2);
+                            resultMessage.addMember("result", "unable to find function " + std::string(functionName));
+                        }
+                        else
+                        {
+                            auto result = function->second(args);
+                            resultMessage.addMember("result", result);
+                        }
+                    }
+                    catch (const std::exception& e)
+                    {
+                        resultMessage.setMember("type", 2);
                         resultMessage.addMember("result", e.what());
                     }
-                }
 
-                sendWebSocketMessage(choc::json::toString(resultMessage));
+                    sendWebSocketMessage(choc::json::toString(resultMessage));
+                });
+            }
+            catch (const std::exception& e)
+            {
+                DBG("Error handling WebSocket message: " << e.what());
             }
         }
 
-        void upgradedToWebSocket(std::string_view path) override {
-            DBG("opened websocket for path " + std::string(path));
+        void upgradedToWebSocket(std::string_view path) override
+        {
+            DBG("opened websocket for path " << std::string(path));
         }
 
     private:
         std::unordered_map<std::string, UIConnection::CallbackFn>& functions;
         AssetServer& assetServer;
-
-        struct FunctionRequest {
-            std::string requestID;
-            std::string functionName;
-            choc::value::Value args;
-        };
-        moodycamel::ReaderWriterQueue<FunctionRequest> functionRequestFifo {1024};
     };
 
-    class SocketUIConnection : public UIConnection {
+    class SocketUIConnection : public UIConnection, juce::Timer
+    {
     public:
-        SocketUIConnection(AssetServer& s, std::string address = "0.0.0.0", uint16_t port = 4350)
-                : assetServer(s)
+        explicit SocketUIConnection(AssetServer& s, const std::string& address = "0.0.0.0", const uint16_t port = 4350)
+            : assetServer(s)
         {
             auto serverPointer = &this->assetServer;
             auto fnsPointer = &this->boundFunctions;
             bool openedOk = server.open(address, port, 0,
-                                        [serverPointer, fnsPointer] {
-                                            return std::make_unique<ClientInstance>(*serverPointer, *fnsPointer);
+                                        [this, serverPointer, fnsPointer]
+                                        {
+                                            auto client = std::make_shared<ClientInstance>(*serverPointer, *fnsPointer);
+                                            {
+                                                std::lock_guard l(activeClientsLock);
+                                                activeClients.push_back({client});
+                                            }
+                                            return client;
                                         },
-                                        [](const std::string& error) {
+                                        [](const std::string& error)
+                                        {
                                             DBG(error);
                                         });
-
-            if (!openedOk) {
-                DBG("unable to open web server");
-            } else {
+            if (openedOk) {
                 DBG(server.getWebSocketAddress());
             }
+            else {
+                DBG("unable to open web server");
+            }
+
+            startTimerHz(20);
         }
 
-        void bind(const std::string &functionName, CallbackFn&& callback) override {
+        void bind(const std::string& functionName, CallbackFn&& callback) override
+        {
             boundFunctions.insert({functionName, callback});
         }
 
-        void eval(const std::string &functionName, const std::vector<choc::value::ValueView> &args) override {
-            //
+        void timerCallback() override
+        {
+            std::string js;
+            while (jsEvalQueue.try_dequeue(js))
+            {
+                auto evalMessage = choc::value::createObject("Message");
+                evalMessage.addMember("type", 3); // 3 = Evaluate
+                evalMessage.addMember("js", js);
+
+                const auto evalString = choc::json::toString(evalMessage);
+
+                std::lock_guard l(activeClientsLock);
+
+                std::erase_if(activeClients, [](const std::weak_ptr<ClientInstance>& client) {
+                    return client.expired();
+                });
+
+                for (const auto& client : activeClients)
+                {
+                    if (auto c = client.lock()) c->sendWebSocketMessage(evalString);
+                }
+            }
+        }
+
+        void eval(const std::string& functionName, const std::vector<choc::value::ValueView>& args) override
+        {
+            auto js = functionName + "(";
+            for (auto i = 0u; i < args.size(); i++)
+            {
+                js += choc::json::toString(args[i]);
+                if (i != args.size() - 1) js += ",";
+            }
+            js += ");";
+
+            jsEvalQueue.enqueue(choc::json::toString(choc::value::Value(js)));
         }
 
     private:
@@ -122,5 +166,10 @@ namespace imagiro {
         AssetServer& assetServer;
 
         std::unordered_map<std::string, CallbackFn> boundFunctions;
+
+        moodycamel::ConcurrentQueue<std::string> jsEvalQueue{512};
+
+        std::mutex activeClientsLock;
+        std::vector<std::weak_ptr<ClientInstance>> activeClients {};
     };
 }
