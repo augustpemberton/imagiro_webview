@@ -89,7 +89,7 @@ namespace imagiro {
 
     class SocketUIConnection : public UIConnection {
     public:
-        SocketUIConnection(AssetServer& s, std::string address = "127.0.0.1", uint16_t port = 4350)
+        SocketUIConnection(AssetServer& s, std::string address = "0.0.0.0", uint16_t port = 4350)
                 : assetServer(s)
         {
             auto serverPointer = &this->assetServer;

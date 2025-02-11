@@ -14,16 +14,19 @@ using GetResourceFn = std::function<const char*(const char*, int&)>;
 using GetResourceOriginalFilenameFn = std::function<const char*(const char*)>;
 
 namespace imagiro {
-    class BinaryDataAssetServer : public AssetServer {
+    class BinaryDataAssetServer : public AssetServer
+    {
     public:
         explicit BinaryDataAssetServer(GetResourceFn fn1, GetResourceOriginalFilenameFn fn2)
-                : getNamedResource(fn1),
-                  getNamedResourceOriginalFilename(fn2) {}
+                : getNamedResource(std::move(fn1)),
+                  getNamedResourceOriginalFilename(std::move(fn2)) {}
+
+        virtual ~BinaryDataAssetServer() = default;
 
         std::optional<Resource> getResource(std::string_view path) override {
-//            if (p.starts_with("http")) {
-//                return getWebResource(juce::URL(p));
-//            }
+            //            if (p.starts_with("http")) {
+            //                return getWebResource(juce::URL(p));
+            //            }
 
             if (path == "/") {
                 path = "index.html";
@@ -40,7 +43,7 @@ namespace imagiro {
                 juce::MemoryBlock fileData;
                 file.loadFileAsData(fileData);
 
-                return toResource((char*) fileData.getData(),
+                return toResource(static_cast<char*>(fileData.getData()),
                                   file.getSize(),
                                   getMimeType(file.getFileExtension().toStdString()));
             }
@@ -49,47 +52,47 @@ namespace imagiro {
                     .replace(".", "_")
                     .replace("-", "").toStdString();
 
-            resourceName = resourceName.substr(resourceName.find_last_of("/") + 1);
+            resourceName = resourceName.substr(resourceName.find_last_of('/') + 1);
             if (isdigit(resourceName[0])) resourceName = "_" + resourceName;
 
             int resourceSize = 0;
-            auto resource = getNamedResource(resourceName.c_str(), resourceSize);
+            const auto resource = getNamedResource(resourceName.c_str(), resourceSize);
             if (!resource) {
                 jassert(resourceName == "favicon_ico" || resourceName == "index_html"); // probably an error if theres something that isnt the favicon we cant find
                 return {};
             }
 
-            auto filePath = std::string(getNamedResourceOriginalFilename(
+            const auto filePath = std::string(getNamedResourceOriginalFilename(
                     resourceName.c_str()));
 
-            auto fileExtension = filePath.substr(filePath.find_last_of(".") + 1);
+            const auto fileExtension = filePath.substr(filePath.find_last_of('.') + 1);
             return toResource(resource, resourceSize,
                               getMimeType(fileExtension));
         }
-//
-//        std::optional<WebView::Options::Resource> getWebResource(juce::URL url) {
-//            juce::URL::InputStreamOptions options (juce::URL::ParameterHandling::inAddress);
-//
-//            juce::StringPairArray responseHeaders;
-//            std::unique_ptr<juce::InputStream> stream (url.createInputStream(options
-//                                                                                     .withResponseHeaders(&responseHeaders)));
-//
-//            if (stream == nullptr) {
-//                jassertfalse;
-//                return {};
-//            }
-//
-//            auto path = url.toString(false).toStdString();
-//            auto fileExtension = path.substr(path.find_last_of(".") + 1);
-//            if (fileExtension.empty() || fileExtension == path) fileExtension = "html";
-//
-//            auto responseString = stream->readEntireStreamAsString();
-//            return toResource(responseString,
-//                              responseHeaders.getValue("Content-Type", "text/html")
-//                                      .toStdString());
-//        }
+        //
+        //        std::optional<WebView::Options::Resource> getWebResource(juce::URL url) {
+        //            juce::URL::InputStreamOptions options (juce::URL::ParameterHandling::inAddress);
+        //
+        //            juce::StringPairArray responseHeaders;
+        //            std::unique_ptr<juce::InputStream> stream (url.createInputStream(options
+        //                                                                                     .withResponseHeaders(&responseHeaders)));
+        //
+        //            if (stream == nullptr) {
+        //                jassertfalse;
+        //                return {};
+        //            }
+        //
+        //            auto path = url.toString(false).toStdString();
+        //            auto fileExtension = path.substr(path.find_last_of(".") + 1);
+        //            if (fileExtension.empty() || fileExtension == path) fileExtension = "html";
+        //
+        //            auto responseString = stream->readEntireStreamAsString();
+        //            return toResource(responseString,
+        //                              responseHeaders.getValue("Content-Type", "text/html")
+        //                                      .toStdString());
+        //        }
 
-        std::string getMimeType (std::string_view extension)
+        static std::string getMimeType (std::string_view extension)
         {
             if (extension == "css")  return "text/css";
             if (extension == "html") return "text/html";
@@ -105,7 +108,7 @@ namespace imagiro {
             return "application/octet-stream";
         }
 
-        Resource toResource(const char* data, unsigned int size, const std::string& mimeType) {
+        static Resource toResource(const char* data, unsigned int size, const std::string& mimeType) {
             std::vector<uint8_t> d;
             std::string contentRange;
 
@@ -116,24 +119,10 @@ namespace imagiro {
             r.mimeType = mimeType;
             return r;
         }
-//
-//        WebView::Options::Resource toResource(juce::String data, const std::string& mimeType,
-//                                              juce::Range<int> byteRange = {-1, -1}) {
-//            auto p = data.toRawUTF8();
-//
-//            if (byteRange.getStart() == -1) {
-//                byteRange = juce::Range<int>(0, strlen(p));
-//            }
-//
-//            auto d = std::vector<uint8_t>(p + byteRange.getStart(),
-//                                          p + byteRange.getEnd());
-//
-//            return {d, mimeType};
-//        }
 
     private:
-
         GetResourceFn getNamedResource;
         GetResourceOriginalFilenameFn getNamedResourceOriginalFilename;
     };
-} // namespace imagiro
+
+}; // namespace imagiro
