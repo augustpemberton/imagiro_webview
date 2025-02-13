@@ -28,8 +28,8 @@ namespace imagiro {
 
         void addBindings() override {
             connection.bind("juce_updateModulation", [&](const choc::value::ValueView& args) -> choc::value::Value {
-                auto sourceID = args[0].getWithDefault(0u);
-                auto targetID = args[1].getWithDefault(0u);
+                auto sourceID = args[0].getWithDefault("");
+                auto targetID = args[1].getWithDefault("");
                 auto depth = args[2].getWithDefault(0.f);
 
                 auto attackMS = args.size() > 3 ? args[3].getWithDefault(0.f) : 0.f;
@@ -40,8 +40,8 @@ namespace imagiro {
             });
 
             connection.bind("juce_removeModulation", [&](const choc::value::ValueView& args) -> choc::value::Value {
-                auto sourceID = args[0].getWithDefault(0u);
-                auto targetID = args[1].getWithDefault(0u);
+                auto sourceID = args[0].getWithDefault("");
+                auto targetID = args[1].getWithDefault("");
 
                 modMatrix.removeConnection(sourceID, targetID);
                 return {};
@@ -54,7 +54,7 @@ namespace imagiro {
             connection.bind("juce_getSourceNames", [&](const choc::value::ValueView& args) -> choc::value::Value {
                 auto namesValue = choc::value::createObject("SourceNames");
                 for (const auto& [sourceID, name] : modMatrix.getSourceNames()) {
-                    namesValue.setMember(std::to_string(sourceID), name);
+                    namesValue.setMember(sourceID, name);
                 }
                 return namesValue;
             });
@@ -62,7 +62,7 @@ namespace imagiro {
             connection.bind("juce_getTargetNames", [&](const choc::value::ValueView& args) -> choc::value::Value {
                 auto namesValue = choc::value::createObject("TargetNames");
                 for (const auto& [targetID, name] : modMatrix.getTargetNames()) {
-                    namesValue.setMember(std::to_string(targetID), name);
+                    namesValue.setMember(targetID, name);
                 }
                 return namesValue;
             });
@@ -70,7 +70,7 @@ namespace imagiro {
             connection.bind("juce_getSourceValues", [&](const choc::value::ValueView& args) -> choc::value::Value {
                 auto sourcesValue = choc::value::createObject("");
                 for (const auto& [sourceID, source] : sourceValues) {
-                    sourcesValue.addMember(std::to_string(sourceID), source.getValue());
+                    sourcesValue.addMember(sourceID, source.getValue());
                 }
                 return sourcesValue;
             });
@@ -79,7 +79,7 @@ namespace imagiro {
                 auto targetsValue = choc::value::createObject("");
                 for (const auto& [targetID, target] : targetValues) {
                     const auto v = target.getValue();
-                    targetsValue.addMember(std::to_string(targetID), v);
+                    targetsValue.addMember(targetID, v);
                 }
                 return targetsValue;
             });

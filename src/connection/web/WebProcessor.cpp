@@ -14,10 +14,12 @@ namespace imagiro {
     WebProcessor::WebProcessor(AssetServer& server, const juce::String& parametersYAMLString, const ParameterLoader& loader,
                                const juce::AudioProcessor::BusesProperties& layout)
             : ConnectedProcessor(std::make_unique<WebUIConnection>(server), parametersYAMLString, loader, layout),
-              webUIAttachment(getWebUIConnection())
+              webUIAttachment(getWebUIConnection()),
+              devicesAttachment(getWebUIConnection())
 //              backgroundTaskRunner()
     {
         addUIAttachment(webUIAttachment);
+        addUIAttachment(devicesAttachment);
     }
 
     void WebProcessor::wrapEditor(WebUIPluginEditor* e) {
@@ -85,8 +87,8 @@ namespace imagiro {
 
         for (auto& [key, val] : uiData.getValues()) {
             uiConnection->eval("window.ui.processorValueUpdated", {
-                choc::value::Value(key),
-                choc::value::Value(val.value)
+                    choc::value::Value(key),
+                    choc::value::Value(val.value)
             });
         }
     }

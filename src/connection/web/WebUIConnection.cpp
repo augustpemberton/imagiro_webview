@@ -109,7 +109,7 @@ namespace imagiro {
         jsEvalQueue.enqueue(choc::json::toString(choc::value::Value(js)));
     }
 
-    void WebUIConnection::eval(const std::string &functionName, const std::vector<choc::value::ValueView>& args) {
+    void WebUIConnection::eval(const std::string &functionName, const std::vector<choc::value::Value>& args) {
         auto evalString = functionName + "(";
         for (auto i=0u; i<args.size(); i++) {
             evalString += choc::json::toString(args[i]);

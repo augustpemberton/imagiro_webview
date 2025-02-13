@@ -224,7 +224,7 @@ choc::value::Value imagiro::ParameterAttachment::getParameterSpecValue(imagiro::
     paramSpec.setMember("defaultVal01", param->getDefaultValue());
     paramSpec.setMember("locked", param->isLocked());
     paramSpec.setMember("configIndex", param->getConfigIndex());
-    paramSpec.setMember("modTargetID", (int)param->getModTarget().getID());
+    paramSpec.setMember("modTargetID", param->getModTarget().getID());
     paramSpec.setMember("jitter", param->getJitterAmount());
 
     auto configsArray = choc::value::createEmptyArray();

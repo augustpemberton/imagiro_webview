@@ -6,6 +6,7 @@
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <imagiro_processor/imagiro_processor.h>
 #include <imagiro_util/imagiro_util.h>
+#include "../../attachment/DevicesAttachment.h"
 
 #include "WebUIConnection.h"
 #include "../../ConnectedProcessor.h"
@@ -44,6 +45,7 @@ namespace imagiro {
         void wrapEditor(WebUIPluginEditor* e);
 
         WebUIAttachment webUIAttachment;
+        DevicesAttachment devicesAttachment;
 
 //     BackgroundTaskRunner backgroundTaskRunner;
     };

@@ -9,6 +9,7 @@
 #include "src/connection/web/WebProcessor.h"
 #include "src/connection/web/ChocBrowserComponent.h"
 #include "src/connection/web/WebUIConnection.h"
+#include "src/attachment/DevicesAttachment.h"
 #endif
 
 #include "src/connection/SocketUIConnection.h"
