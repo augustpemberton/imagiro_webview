@@ -41,7 +41,7 @@ namespace imagiro {
         }
 
         void changeListenerCallback(juce::ChangeBroadcaster *source) override {
-            connection.eval("window.ui.onDevicesChanged()");
+            connection.eval("window.ui.onDevicesChanged");
         }
 
         void addBindings() override {

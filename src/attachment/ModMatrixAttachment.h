@@ -35,7 +35,9 @@ namespace imagiro {
                 auto attackMS = args.size() > 3 ? args[3].getWithDefault(0.f) : 0.f;
                 auto releaseMS = args.size() > 4 ? args[4].getWithDefault(0.f) : 0.f;
 
-                modMatrix.setConnection(sourceID, targetID, {depth, attackMS, releaseMS});
+                auto bipolar = args.size() > 5 ? args[5].getWithDefault(false) : false;
+
+                modMatrix.setConnection(sourceID, targetID, {depth, attackMS, releaseMS, bipolar});
                 return {};
             });
 
@@ -49,22 +51,6 @@ namespace imagiro {
 
             connection.bind("juce_getModMatrix", [&](const choc::value::ValueView& args) -> choc::value::Value {
                 return matrixMessageThread.getState();
-            });
-
-            connection.bind("juce_getSourceNames", [&](const choc::value::ValueView& args) -> choc::value::Value {
-                auto namesValue = choc::value::createObject("SourceNames");
-                for (const auto& [sourceID, name] : modMatrix.getSourceNames()) {
-                    namesValue.setMember(sourceID, name);
-                }
-                return namesValue;
-            });
-
-            connection.bind("juce_getTargetNames", [&](const choc::value::ValueView& args) -> choc::value::Value {
-                auto namesValue = choc::value::createObject("TargetNames");
-                for (const auto& [targetID, name] : modMatrix.getTargetNames()) {
-                    namesValue.setMember(targetID, name);
-                }
-                return namesValue;
             });
 
             connection.bind("juce_getSourceValues", [&](const choc::value::ValueView& args) -> choc::value::Value {
