@@ -12,6 +12,9 @@
 #include "src/attachment/DevicesAttachment.h"
 #endif
 
-#include "src/connection/SocketUIConnection.h"
+
+#if __has_include(<boost/beast.hpp>) && __has_include(<boost/asio.hpp>)
+    #include "src/connection/SocketUIConnection.h"
+#endif
 #include "src/connection/DummyUIConnection.h"
 #include "src/ConnectedProcessor.h"

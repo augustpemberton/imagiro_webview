@@ -7,7 +7,7 @@
 #include "WebUIConnection.h"
 
 #if JUCE_WINDOWS
-#include "WinKeypressWorkaround.h"
+#include "../../WinKeypressWorkaround.h"
 #endif
 
 namespace imagiro {

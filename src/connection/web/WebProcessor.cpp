@@ -8,19 +8,21 @@
 #include "imagiro_webview/src/attachment/UtilAttachment.h"
 #include "imagiro_webview/src/attachment/ModMatrixAttachment.h"
 #include "imagiro_webview/src/attachment/util/UIData.h"
+#include "imagiro_webview/src/attachment/WebUIAttachment.h"
 
 namespace imagiro {
 
     WebProcessor::WebProcessor(AssetServer& server, const juce::String& parametersYAMLString, const ParameterLoader& loader,
                                const juce::AudioProcessor::BusesProperties& layout)
             : ConnectedProcessor(std::make_unique<WebUIConnection>(server), parametersYAMLString, loader, layout),
-              webUIAttachment(getWebUIConnection()),
               devicesAttachment(getWebUIConnection())
 //              backgroundTaskRunner()
     {
-        addUIAttachment(webUIAttachment);
+      webUIAttachment = std::make_unique<WebUIAttachment>(getWebUIConnection(), *this);
         addUIAttachment(devicesAttachment);
     }
+
+    WebProcessor::~WebProcessor() = default;
 
     void WebProcessor::wrapEditor(WebUIPluginEditor* e) {
 #if JUCE_DEBUG
