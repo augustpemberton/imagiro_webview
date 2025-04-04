@@ -4,3 +4,6 @@
 #include "src/connection/web/WebProcessor.cpp"
 #include "src/connection/web/WebUIConnection.cpp"
 #endif
+
+
+#include "src/attachment/DevicesAttachment.cpp"
