@@ -15,7 +15,7 @@ namespace imagiro {
                 : UIAttachment(connection), modMatrix(matrix)
         {
             modMatrix.addListener(this);
-            startTimerHz(30);
+            startTimerHz(120);
         }
 
         ~ModMatrixAttachment() override {
@@ -58,6 +58,7 @@ namespace imagiro {
                 for (const auto& [sourceID, source] : sourceValues) {
                     sourcesValue.addMember(sourceID, source.getValue());
                 }
+                sourcesValue.addMember("time", lastUIUpdate.load());
                 return sourcesValue;
             });
 
@@ -67,6 +68,7 @@ namespace imagiro {
                     const auto v = target.getValue();
                     targetsValue.addMember(targetID, v);
                 }
+                targetsValue.addMember("time", lastUIUpdate.load());
                 return targetsValue;
             });
         }
@@ -81,12 +83,16 @@ namespace imagiro {
 
             sourceValuesFifo.enqueue(modMatrix.getSourceValues());
             targetValuesFifo.enqueue(modMatrix.getTargetValues());
+
+            lastAudioUpdate = juce::Time::getMillisecondCounterHiRes();
         }
 
         void timerCallback() override {
             while (matrixFifo.try_dequeue(matrixMessageThread)) { /**/ }
             while (sourceValuesFifo.try_dequeue(sourceValues)) { /**/ }
             while (targetValuesFifo.try_dequeue(targetValues)) { /**/ }
+
+            lastUIUpdate = lastAudioUpdate.load();
 
             if (sendMatrixUpdateFlag) {
                 auto matrixValue = matrixMessageThread.getState();
@@ -100,6 +106,9 @@ namespace imagiro {
         }
 
     private:
+        std::atomic<double> lastAudioUpdate;
+        std::atomic<double> lastUIUpdate;
+
         ModMatrix& modMatrix;
 
         SerializedMatrix matrixMessageThread {};
