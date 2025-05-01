@@ -5,23 +5,24 @@
 #pragma once
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <imagiro_processor/imagiro_processor.h>
-#include <imagiro_util/imagiro_util.h>
 #include "../../attachment/DevicesAttachment.h"
 
 #include "WebUIConnection.h"
 #include "../../ConnectedProcessor.h"
 #include "../../AssetServer/AssetServer.h"
-#include "../../attachment/WebUIAttachment.h"
+
 
 namespace imagiro {
     class WebUIPluginEditor;
+    class WebUIAttachment;
 
     class WebProcessor : public ConnectedProcessor {
     public:
         WebProcessor(AssetServer& assetServer, const juce::String& parametersYAMLString, const ParameterLoader& loader = ParameterLoader(),
                      const juce::AudioProcessor::BusesProperties& layout = getDefaultProperties());
+        ~WebProcessor() override;
 
-        WebUIConnection& getWebUIConnection() { return static_cast<WebUIConnection&>(*uiConnection); }
+        WebUIConnection& getWebUIConnection() const { return dynamic_cast<WebUIConnection&>(*uiConnection); }
         juce::AudioProcessorEditor* createEditor() override;
 
         virtual juce::Point<int> getDefaultWindowSize() { return {400, 300}; }
@@ -44,7 +45,7 @@ namespace imagiro {
     protected:
         void wrapEditor(WebUIPluginEditor* e);
 
-        WebUIAttachment webUIAttachment;
+        std::unique_ptr<WebUIAttachment> webUIAttachment;
         DevicesAttachment devicesAttachment;
 
 //     BackgroundTaskRunner backgroundTaskRunner;

@@ -151,7 +151,8 @@ namespace imagiro {
                 auto signalName = std::string(args[0].getWithDefault(""));
 
                 std::vector<choc::value::Value> v;
-                if (args.size() > 1) v.push_back(choc::value::Value(args[1]));
+                v.emplace_back(signalName);
+                if (args.size() > 1) v.emplace_back(choc::value::Value(args[1]));
                 connection.eval("window.ui.onSignal", v);
                 return {};
             });

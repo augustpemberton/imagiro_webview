@@ -35,6 +35,7 @@ namespace imagiro {
 #else
         auto debugMode = false;
 #endif
+
         try {
             auto view = std::make_shared<choc::ui::WebView>(
                     choc::ui::WebView::Options{
