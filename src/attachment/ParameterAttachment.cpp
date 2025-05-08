@@ -228,7 +228,7 @@ choc::value::Value imagiro::ParameterAttachment::getParameterSpecValue(imagiro::
     paramSpec.setMember("jitter", param->getJitterAmount());
 
     auto configsArray = choc::value::createEmptyArray();
-    for (const auto& config : param->configs) {
+    for (const auto& config : param->getAllConfigs()) {
         auto configObject = choc::value::createObject("ParamConfig");
         configObject.setMember("name", config.name);
 
