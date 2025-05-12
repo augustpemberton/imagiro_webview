@@ -11,20 +11,21 @@
 #include "imagiro_webview/src/attachment/WebUIAttachment.h"
 
 namespace imagiro {
-
-    WebProcessor::WebProcessor(AssetServer& server, const juce::String& parametersYAMLString, const ParameterLoader& loader,
-                               const juce::AudioProcessor::BusesProperties& layout)
-            : ConnectedProcessor(std::make_unique<WebUIConnection>(server), parametersYAMLString, loader, layout),
-              devicesAttachment(getWebUIConnection())
-//              backgroundTaskRunner()
+    WebProcessor::WebProcessor(AssetServer &server, const juce::String &parametersYAMLString,
+                               const ParameterLoader &loader,
+                               const juce::AudioProcessor::BusesProperties &layout)
+        : ConnectedProcessor(std::make_unique<WebUIConnection>(server), parametersYAMLString, loader, layout),
+          devicesAttachment(getWebUIConnection())
+    //              backgroundTaskRunner()
     {
-      webUIAttachment = std::make_unique<WebUIAttachment>(getWebUIConnection(), *this);
+        webUIAttachment = std::make_unique<WebUIAttachment>(getWebUIConnection(), *this);
+        addUIAttachment(*webUIAttachment);
         addUIAttachment(devicesAttachment);
     }
 
     WebProcessor::~WebProcessor() = default;
 
-    void WebProcessor::wrapEditor(WebUIPluginEditor* e) {
+    void WebProcessor::wrapEditor(WebUIPluginEditor *e) {
 #if JUCE_DEBUG
         e->getBrowser().getWebUIConnection().navigate("http://localhost:4342");
 #endif
@@ -38,7 +39,7 @@ namespace imagiro {
 
         auto size = defaultSize;
 
-        auto& configFile = resources->getConfigFile();
+        auto &configFile = resources->getConfigFile();
         if (configFile->containsKey("defaultWidth")) size.x = configFile->getIntValue("defaultWidth");
         if (configFile->containsKey("defaultHeight")) size.y = configFile->getIntValue("defaultHeight");
 
@@ -54,11 +55,9 @@ namespace imagiro {
             }
         }
 
-        if(wrapperType == wrapperType_Standalone)
-        {
-            if(juce::TopLevelWindow::getNumTopLevelWindows() == 1)
-            {
-                juce::TopLevelWindow* w = juce::TopLevelWindow::getTopLevelWindow(0);
+        if (wrapperType == wrapperType_Standalone) {
+            if (juce::TopLevelWindow::getNumTopLevelWindows() == 1) {
+                juce::TopLevelWindow *w = juce::TopLevelWindow::getTopLevelWindow(0);
                 w->setUsingNativeTitleBar(true);
             }
         }
@@ -81,17 +80,18 @@ namespace imagiro {
         if (preset.getData().hasObjectMember("uiData")) {
             uiData = UIData::fromState(preset.getData()["uiData"],
                                        !preset.isDAWSaveState());
-        } else if (preset.getData().hasObjectMember("webviewData")) { // compatibility
+        } else if (preset.getData().hasObjectMember("webviewData")) {
+            // compatibility
             uiData = UIData::fromState(preset.getData()["webviewData"],
                                        !preset.isDAWSaveState());
         }
 
 
-        for (auto& [key, val] : uiData.getValues()) {
+        for (auto &[key, val]: uiData.getValues()) {
             uiConnection->eval("window.ui.processorValueUpdated", {
-                    choc::value::Value(key),
-                    choc::value::Value(val.value)
-            });
+                                   choc::value::Value(key),
+                                   choc::value::Value(val.value)
+                               });
         }
     }
 }
