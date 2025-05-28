@@ -56,7 +56,7 @@ namespace imagiro {
             connection.bind("juce_getSourceValues", [&](const choc::value::ValueView& args) -> choc::value::Value {
                 auto sourcesValue = choc::value::createObject("");
                 for (const auto& [sourceID, source] : sourceValues) {
-                    sourcesValue.addMember(sourceID, source.getValue());
+                    sourcesValue.addMember(sourceID, source.getState());
                 }
                 sourcesValue.addMember("time", lastUIUpdate.load());
                 return sourcesValue;
@@ -65,7 +65,7 @@ namespace imagiro {
             connection.bind("juce_getTargetValues", [&](const choc::value::ValueView& args) -> choc::value::Value {
                 auto targetsValue = choc::value::createObject("");
                 for (const auto& [targetID, target] : targetValues) {
-                    const auto v = target.getValue();
+                    const auto v = target.getState();
                     targetsValue.addMember(targetID, v);
                 }
                 targetsValue.addMember("time", lastUIUpdate.load());
