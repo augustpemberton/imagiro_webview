@@ -179,7 +179,6 @@ void imagiro::ParameterAttachment::addBindings() {
             }
     );
 
-
     connection.bind("juce_setParameterJitter", [&](const choc::value::ValueView &args) -> choc::value::Value {
         auto paramID = juce::String(args[0].toString());
         auto jitterAmount = args[1].getWithDefault(0.f);
@@ -192,6 +191,12 @@ void imagiro::ParameterAttachment::addBindings() {
         return {};
     });
 
+    connection.bind("juce_getParameterModTarget", [&](const choc::value::ValueView &args) -> choc::value::Value {
+        auto paramID = juce::String(args[0].toString());
+        auto param = processor.getParameter(paramID);
+        if (!param) return {};
+        return choc::value::Value{param->getModTarget().getID()};
+    });
 }
 
 void imagiro::ParameterAttachment::parameterChanged(imagiro::Parameter *param) {
