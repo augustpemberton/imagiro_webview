@@ -10,12 +10,11 @@ namespace imagiro {
     class ModMatrixAttachment : public UIAttachment, ModMatrix::Listener, juce::Timer {
     private:
         // Cached choc::value objects for reuse
-        mutable choc::value::Value cachedSourcesValue;
-        mutable choc::value::Value cachedTargetsValue;
-        mutable choc::value::Value cachedEmptyValue;
-        mutable bool sourcesValueInitialized = false;
-        mutable bool targetsValueInitialized = false;
-        mutable bool emptyValueInitialized = false;
+        choc::value::Value cachedSourcesValue;
+        choc::value::Value cachedTargetsValue;
+        bool sourcesValueInitialized = false;
+        bool targetsValueInitialized = false;
+        bool emptyValueInitialized = false;
 
     public:
         ModMatrixAttachment(UIConnection& connection, ModMatrix& matrix)
@@ -31,6 +30,8 @@ namespace imagiro {
 
         void OnMatrixUpdated() override {
             sendMatrixUpdateFlagAfterNextDataLoad = true;
+            sourcesValueInitialized = false;
+            targetsValueInitialized = false;
         }
 
         void addBindings() override {
@@ -46,8 +47,7 @@ namespace imagiro {
 
                 modMatrix.setConnection(sourceID, targetID, {depth, attackMS, releaseMS, bipolar});
 
-                // Reuse cached empty value
-                return getCachedEmptyValue();
+                return {};
             });
 
             connection.bind("juce_removeModulation", [&](const choc::value::ValueView& args) -> choc::value::Value {
@@ -56,8 +56,7 @@ namespace imagiro {
 
                 modMatrix.removeConnection(sourceID, targetID);
 
-                // Reuse cached empty value
-                return getCachedEmptyValue();
+                return {};
             });
 
             connection.bind("juce_getModMatrix", [&](const choc::value::ValueView& args) -> choc::value::Value {
@@ -88,23 +87,66 @@ namespace imagiro {
         }
 
         void timerCallback() override {
-            bool sourceValuesUpdated = false;
-            bool targetValuesUpdated = false;
+            const auto mostRecentVoiceIndex = modMatrix.getMostRecentVoiceIndex();
 
             while (matrixFifo.try_dequeue(matrixMessageThread)) { /**/ }
+
+            sourceValueMinMaxes = choc::value::createObject("SourceValues");
+            targetValueMinMaxes = choc::value::createObject("TargetValues");
+
+            bool sourcesUpdated = false;
+            bool targetsUpdated = false;
+
             while (sourceValuesFifo.try_dequeue(sourceValues)) {
-                sourceValuesUpdated = true;
-            }
-            while (targetValuesFifo.try_dequeue(targetValues)) {
-                targetValuesUpdated = true;
+                sourcesUpdated = true;
+                for (auto &[id, sourceValue]: sourceValues) {
+
+                    bool initialize = false;
+                    float min = 0;
+                    float max = 0;
+
+                    if (sourceValueMinMaxes.hasObjectMember(id)) {
+                        min = sourceValueMinMaxes[id][0].getWithDefault(0.f);
+                        max = sourceValueMinMaxes[id][1].getWithDefault(0.f);
+                    } else {
+                        initialize = true;
+                    }
+
+                    const auto val = sourceValue->value.getGlobalValue() + sourceValue->value.getVoiceValue(mostRecentVoiceIndex);
+
+                    if (val < min || initialize) min = val;
+                    if (val > max || initialize) max = val;
+
+                    sourceValueMinMaxes.setMember(id, choc::value::createArray(2, [min, max](const size_t index) {
+                        return index == 0 ? min : max;
+                    }));
+                }
             }
 
-            // Update cached values in-place if data changed
-            if (sourceValuesUpdated && sourcesValueInitialized) {
-                updateCachedSourceValues();
-            }
-            if (targetValuesUpdated && targetsValueInitialized) {
-                updateCachedTargetValues();
+            while (targetValuesFifo.try_dequeue(targetValues)) {
+                targetsUpdated = true;
+                for (auto &[id, targetValue]: targetValues) {
+
+                    bool initialize = false;
+                    float min = 0;
+                    float max = 0;
+
+                    if (targetValueMinMaxes.hasObjectMember(id)) {
+                        min = targetValueMinMaxes[id][0].getWithDefault(0.f);
+                        max = targetValueMinMaxes[id][1].getWithDefault(0.f);
+                    } else {
+                        initialize = true;
+                    }
+
+                    const auto val = targetValue->value.getGlobalValue() + targetValue->value.getVoiceValue(mostRecentVoiceIndex);
+
+                    if (val < min || initialize) min = val;
+                    if (val > max || initialize) max = val;
+
+                    targetValueMinMaxes.setMember(id, choc::value::createArray(2, [min, max](const size_t index) {
+                        return index == 0 ? min : max;
+                    }));
+                }
             }
 
             lastUIUpdate = lastAudioUpdate.load();
@@ -113,6 +155,14 @@ namespace imagiro {
                 auto matrixValue = matrixMessageThread.getState();
                 connection.eval("window.ui.modMatrixUpdated", {matrixValue});
                 sendMatrixUpdateFlag = false;
+            }
+
+            if (sourcesUpdated) {
+               connection.eval("window.ui.sourceValuesUpdated", {sourceValueMinMaxes, choc::value::Value(lastUIUpdate.load())});
+            }
+
+            if (targetsUpdated) {
+               connection.eval("window.ui.targetValuesUpdated", {targetValueMinMaxes, choc::value::Value(lastAudioUpdate.load())});
             }
         }
 
@@ -132,27 +182,21 @@ namespace imagiro {
         std::atomic<bool> sendMatrixUpdateFlag {false};
         std::atomic<bool> sendMatrixUpdateFlagAfterNextDataLoad {false};
 
-        std::unordered_map<SourceID, ModMatrix::SourceValue> sourceValues;
-        moodycamel::ReaderWriterQueue<std::unordered_map<SourceID, ModMatrix::SourceValue>> sourceValuesFifo {128};
+        choc::value::Value sourceValueMinMaxes;
+        choc::value::Value targetValueMinMaxes;
 
-        std::unordered_map<TargetID, ModMatrix::TargetValue> targetValues;
-        moodycamel::ReaderWriterQueue<std::unordered_map<TargetID, ModMatrix::TargetValue>> targetValuesFifo {128};
+        std::unordered_map<SourceID, std::shared_ptr<ModMatrix::SourceValue>> sourceValues;
+        moodycamel::ReaderWriterQueue<std::unordered_map<SourceID, std::shared_ptr<ModMatrix::SourceValue>>> sourceValuesFifo {128};
 
-        // Helper methods for cached value management
-        choc::value::Value& getCachedEmptyValue() const {
-            if (!emptyValueInitialized) {
-                cachedEmptyValue = choc::value::Value();
-                emptyValueInitialized = true;
-            }
-            return cachedEmptyValue;
-        }
+        std::unordered_map<TargetID, std::shared_ptr<ModMatrix::TargetValue>> targetValues;
+        moodycamel::ReaderWriterQueue<std::unordered_map<TargetID, std::shared_ptr<ModMatrix::TargetValue>>> targetValuesFifo {128};
 
-        choc::value::Value& getCachedSourceValues() const {
+        choc::value::Value& getCachedSourceValues() {
             if (!sourcesValueInitialized) {
                 cachedSourcesValue = choc::value::createObject("");
 
                 for (const auto& [sourceID, source] : sourceValues) {
-                    cachedSourcesValue.addMember(sourceID, source.getState());
+                    cachedSourcesValue.addMember(sourceID, source->getState());
                 }
                 cachedSourcesValue.addMember("time", lastUIUpdate.load());
                 sourcesValueInitialized = true;
@@ -160,43 +204,18 @@ namespace imagiro {
             return cachedSourcesValue;
         }
 
-        choc::value::Value& getCachedTargetValues() const {
+        choc::value::Value& getCachedTargetValues() {
             if (!targetsValueInitialized) {
                 cachedTargetsValue = choc::value::createObject("");
 
                 for (const auto& [targetID, target] : targetValues) {
-                    const auto v = target.getState();
+                    const auto v = target->getState();
                     cachedTargetsValue.addMember(targetID, v);
                 }
                 cachedTargetsValue.addMember("time", lastUIUpdate.load());
                 targetsValueInitialized = true;
             }
             return cachedTargetsValue;
-        }
-
-        void updateCachedSourceValues() {
-            // Update existing members in-place
-            for (const auto& [sourceID, source] : sourceValues) {
-                if (cachedSourcesValue.hasObjectMember(sourceID)) {
-                    cachedSourcesValue.setMember(sourceID, source.getState());
-                } else {
-                    cachedSourcesValue.addMember(sourceID, source.getState());
-                }
-            }
-            cachedSourcesValue.setMember("time", lastUIUpdate.load());
-        }
-
-        void updateCachedTargetValues() {
-            // Update existing members in-place
-            for (const auto& [targetID, target] : targetValues) {
-                const auto v = target.getState();
-                if (cachedTargetsValue.hasObjectMember(targetID)) {
-                    cachedTargetsValue.setMember(targetID, v);
-                } else {
-                    cachedTargetsValue.addMember(targetID, v);
-                }
-            }
-            cachedTargetsValue.setMember("time", lastUIUpdate.load());
         }
     };
 }
