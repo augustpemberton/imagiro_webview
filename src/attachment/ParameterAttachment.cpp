@@ -7,6 +7,7 @@
 
 imagiro::ParameterAttachment::ParameterAttachment(UIConnection &w, Processor& p)
         : UIAttachment(w), processor(p) {
+    processor.addParameterListener(this);
 }
 
 void imagiro::ParameterAttachment::addListeners() {
@@ -19,6 +20,11 @@ imagiro::ParameterAttachment::~ParameterAttachment() {
     for (auto param: processor.getPluginParameters()) {
         param->removeListener(this);
     }
+    processor.removeParameterListener(this);
+}
+
+void ParameterAttachment::onParameterAdded(Parameter &p) {
+    p.addListener(this);
 }
 
 void imagiro::ParameterAttachment::addBindings() {
@@ -144,7 +150,7 @@ void imagiro::ParameterAttachment::addBindings() {
                 auto param = processor.getParameter(paramID);
                 if (!param) return {};
 
-                auto val = param->getConfig()->valueFunction(displayValue);
+                auto val = param->getConfig()->valueFunction(displayValue, param);
                 auto val01 = param->convertTo0to1(val);
                 return choc::value::Value(val01);
             });
@@ -157,7 +163,7 @@ void imagiro::ParameterAttachment::addBindings() {
                 auto param = processor.getParameter(paramID);
                 if (!param) return {};
 
-                auto val = param->getConfig()->valueFunction(displayValue);
+                auto val = param->getConfig()->valueFunction(displayValue, param);
                 param->setUserValueAsUserAction(val);
 
                 return {};
@@ -220,6 +226,7 @@ choc::value::Value imagiro::ParameterAttachment::getAllParameterSpecValue() {
 void imagiro::ParameterAttachment::configChanged(imagiro::Parameter *param) {
     connection.eval("window.ui.onParameterConfigChanged", {getParameterSpecValue(param)});
 }
+
 
 choc::value::Value imagiro::ParameterAttachment::getParameterSpecValue(imagiro::Parameter *param) {
     auto paramSpec = choc::value::createObject("param");
