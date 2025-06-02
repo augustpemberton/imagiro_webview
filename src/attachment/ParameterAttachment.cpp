@@ -47,6 +47,10 @@ void imagiro::ParameterAttachment::addBindings() {
                         auto positive = numSteps > 0;
                         auto interval = param->getNormalisableRange().interval;
 
+                        if (param->getConfig()->choices.size() > 1) {
+                            interval = 1.f / (param->getConfig()->choices.size() - 1);
+                        }
+
                         auto currentVal01 = param->getValue();
 
                         auto minIncrementPercent = 0.01;
