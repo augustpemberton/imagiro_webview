@@ -21,7 +21,7 @@ namespace imagiro {
                 : UIAttachment(connection), modMatrix(matrix)
         {
             modMatrix.addListener(this);
-            startTimerHz(120);
+            startTimerHz(60);
         }
 
         ~ModMatrixAttachment() override {
@@ -91,61 +91,25 @@ namespace imagiro {
 
             while (matrixFifo.try_dequeue(matrixMessageThread)) { /**/ }
 
-            sourceValueMinMaxes = choc::value::createObject("SourceValues");
-            targetValueMinMaxes = choc::value::createObject("TargetValues");
+            sourceChocValues = choc::value::createObject("SourceValues");
+            targetChocValues = choc::value::createObject("TargetValues");
 
             bool sourcesUpdated = false;
             bool targetsUpdated = false;
 
-            while (sourceValuesFifo.try_dequeue(sourceValues)) {
-                sourcesUpdated = true;
+            while (sourceValuesFifo.try_dequeue(sourceValues)) { sourcesUpdated = true; }
+            if (sourcesUpdated) {
                 for (auto &[id, sourceValue]: sourceValues) {
-
-                    bool initialize = false;
-                    float min = 0;
-                    float max = 0;
-
-                    if (sourceValueMinMaxes.hasObjectMember(id)) {
-                        min = sourceValueMinMaxes[id][0].getWithDefault(0.f);
-                        max = sourceValueMinMaxes[id][1].getWithDefault(0.f);
-                    } else {
-                        initialize = true;
-                    }
-
                     const auto val = sourceValue->value.getGlobalValue() + sourceValue->value.getVoiceValue(mostRecentVoiceIndex);
-
-                    if (val < min || initialize) min = val;
-                    if (val > max || initialize) max = val;
-
-                    sourceValueMinMaxes.setMember(id, choc::value::createArray(2, [min, max](const size_t index) {
-                        return index == 0 ? min : max;
-                    }));
+                    sourceChocValues.setMember(id, val);
                 }
             }
 
-            while (targetValuesFifo.try_dequeue(targetValues)) {
-                targetsUpdated = true;
+            while (targetValuesFifo.try_dequeue(targetValues)) { targetsUpdated = true; }
+            if (targetsUpdated) {
                 for (auto &[id, targetValue]: targetValues) {
-
-                    bool initialize = false;
-                    float min = 0;
-                    float max = 0;
-
-                    if (targetValueMinMaxes.hasObjectMember(id)) {
-                        min = targetValueMinMaxes[id][0].getWithDefault(0.f);
-                        max = targetValueMinMaxes[id][1].getWithDefault(0.f);
-                    } else {
-                        initialize = true;
-                    }
-
                     const auto val = targetValue->value.getGlobalValue() + targetValue->value.getVoiceValue(mostRecentVoiceIndex);
-
-                    if (val < min || initialize) min = val;
-                    if (val > max || initialize) max = val;
-
-                    targetValueMinMaxes.setMember(id, choc::value::createArray(2, [min, max](const size_t index) {
-                        return index == 0 ? min : max;
-                    }));
+                    targetChocValues.setMember(id, val);
                 }
             }
 
@@ -158,11 +122,11 @@ namespace imagiro {
             }
 
             if (sourcesUpdated) {
-               connection.eval("window.ui.sourceValuesUpdated", {sourceValueMinMaxes, choc::value::Value(lastUIUpdate.load())});
+               connection.eval("window.ui.sourceValuesUpdated", {sourceChocValues, choc::value::Value(lastUIUpdate.load())});
             }
 
             if (targetsUpdated) {
-               connection.eval("window.ui.targetValuesUpdated", {targetValueMinMaxes, choc::value::Value(lastAudioUpdate.load())});
+               connection.eval("window.ui.targetValuesUpdated", {targetChocValues, choc::value::Value(lastAudioUpdate.load())});
             }
         }
 
@@ -182,8 +146,8 @@ namespace imagiro {
         std::atomic<bool> sendMatrixUpdateFlag {false};
         std::atomic<bool> sendMatrixUpdateFlagAfterNextDataLoad {false};
 
-        choc::value::Value sourceValueMinMaxes;
-        choc::value::Value targetValueMinMaxes;
+        choc::value::Value sourceChocValues;
+        choc::value::Value targetChocValues;
 
         std::unordered_map<SourceID, std::shared_ptr<ModMatrix::SourceValue>> sourceValues;
         moodycamel::ReaderWriterQueue<std::unordered_map<SourceID, std::shared_ptr<ModMatrix::SourceValue>>> sourceValuesFifo {128};
