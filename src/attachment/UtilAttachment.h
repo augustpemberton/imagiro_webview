@@ -4,14 +4,22 @@
 
 #pragma once
 #include "UIAttachment.h"
-#include "util/UIData.h"
+#include "choc/text/choc_JSON.h"
+#include "imagiro_processor/imagiro_processor.h"
 
 namespace imagiro {
-    class UtilAttachment : public UIAttachment {
+    class UtilAttachment : public UIAttachment, StringData::Listener {
     public:
-        UtilAttachment(UIConnection& c, UIData& u, Processor& p)
+        UtilAttachment(UIConnection& c, StringData& u, Processor& p)
                 : UIAttachment(c), uiData(u), processor(p) {
 
+        }
+
+        void OnStringDataUpdated(StringData& data, const std::string &key, const std::string &newValue) override {
+            connection.eval("window.ui.processorValueUpdated", {
+                choc::value::Value{key},
+                choc::value::Value{newValue}
+            });
         }
 
         void addBindings() override {
@@ -50,15 +58,11 @@ namespace imagiro {
                     "juce_saveInProcessor", [&](const choc::value::ValueView &args) -> choc::value::Value {
                         auto key = std::string(args[0].getWithDefault(""));
                         if (key.empty()) return {};
-                        auto value = std::string(args[1].getWithDefault(""));
-                        auto saveInPreset = args[2].getWithDefault(false);
+                        const auto value = std::string(args[1].getWithDefault(""));
+                        const auto saveInPreset = args[2].getWithDefault(false);
 
                         uiData.set(key, value, saveInPreset);
 
-                        connection.eval("window.ui.processorValueUpdated", {
-                            choc::value::Value{args[0]},
-                            choc::value::Value{args[1]}
-                        });
                         return {};
                     });
 
@@ -159,7 +163,7 @@ namespace imagiro {
         }
 
     private:
-        UIData& uiData;
+        StringData& uiData;
         Processor& processor;
 
     };

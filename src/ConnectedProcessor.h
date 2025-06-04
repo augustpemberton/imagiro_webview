@@ -13,8 +13,6 @@
 #include "imagiro_webview/src/attachment/UtilAttachment.h"
 #include "imagiro_webview/src/attachment/ModMatrixAttachment.h"
 
-#include "attachment/util/UIData.h"
-
 namespace imagiro {
     class ConnectedProcessor : public Processor {
     public:
@@ -45,18 +43,16 @@ namespace imagiro {
             }
         }
 
-        UIData& getWebViewData() { return uiData; }
 
     protected:
         std::unique_ptr<UIConnection> uiConnection;
-        UIData uiData;
 
     private:
         ParameterAttachment parameterAttachment {*uiConnection, *this};
         PresetAttachment presetAttachment {*uiConnection, *this};
         PluginInfoAttachment pluginInfoAttachment {*uiConnection, *this};
         FileIOAttachment fileIOAttachment {*uiConnection};
-        UtilAttachment utilAttachment {*uiConnection, uiData, *this};
+        UtilAttachment utilAttachment {*uiConnection, stringData, *this};
         ModMatrixAttachment modMatrixAttachment {*uiConnection, modMatrix};
 
         std::vector<UIAttachment*> attachments;

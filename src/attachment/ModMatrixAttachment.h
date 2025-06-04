@@ -21,7 +21,7 @@ namespace imagiro {
                 : UIAttachment(connection), modMatrix(matrix)
         {
             modMatrix.addListener(this);
-            startTimerHz(60);
+            startTimerHz(120);
         }
 
         ~ModMatrixAttachment() override {
@@ -154,6 +154,8 @@ namespace imagiro {
 
         std::unordered_map<TargetID, std::shared_ptr<ModMatrix::TargetValue>> targetValues;
         moodycamel::ReaderWriterQueue<std::unordered_map<TargetID, std::shared_ptr<ModMatrix::TargetValue>>> targetValuesFifo {128};
+
+        juce::VBlankAttachment vBlank;
 
         choc::value::Value& getCachedSourceValues() {
             if (!sourcesValueInitialized) {

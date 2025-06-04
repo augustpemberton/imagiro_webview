@@ -37,9 +37,6 @@ namespace imagiro {
         };
         virtual ResizeType isResizable() { return ResizeType::NonResizable; }
 
-        Preset createPreset(const juce::String &name, bool isDAWSaveState) override;
-        void loadPreset(Preset preset) override;
-
 //    BackgroundTaskRunner& getBackgroundTaskRunner() { return backgroundTaskRunner; }
 
     protected:
