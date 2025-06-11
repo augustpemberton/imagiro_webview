@@ -3,7 +3,6 @@
 //
 
 #pragma once
-#include <imagiro_processor/imagiro_processor.h>
 #include "UIAttachment.h"
 
 namespace imagiro {

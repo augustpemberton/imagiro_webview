@@ -74,14 +74,14 @@ namespace imagiro {
 
         // call each processBlock tick
         void processCallback() override {
-            matrixFifo.enqueue(modMatrix.getSerializedMatrix());
+            matrixFifo.try_enqueue(modMatrix.getSerializedMatrix());
             if (sendMatrixUpdateFlagAfterNextDataLoad) {
                 sendMatrixUpdateFlagAfterNextDataLoad = false;
                 sendMatrixUpdateFlag = true;
             }
 
-            sourceValuesFifo.enqueue(modMatrix.getSourceValues());
-            targetValuesFifo.enqueue(modMatrix.getTargetValues());
+            sourceValuesFifo.try_enqueue(modMatrix.getSourceValues());
+            targetValuesFifo.try_enqueue(modMatrix.getTargetValues());
 
             lastAudioUpdate = juce::Time::getMillisecondCounterHiRes();
         }
