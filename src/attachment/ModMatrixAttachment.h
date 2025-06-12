@@ -29,9 +29,23 @@ namespace imagiro {
         }
 
         void OnMatrixUpdated() override {
-            sendMatrixUpdateFlagAfterNextDataLoad = true;
             sourcesValueInitialized = false;
             targetsValueInitialized = false;
+
+            const auto& matrix = modMatrix.getSerializedMatrix();
+            for (const auto& entry : matrix) {
+                matrixFifo.enqueue(entry);
+            }
+
+            matrixUpdatedFlag = true;
+        }
+
+        void OnTargetValueUpdated(const TargetID &targetID) override {
+            targetValuesUpdatedFlag = true;
+
+            targetValuesFifo.try_enqueue({
+                targetID, modMatrix.getTargetValues()[targetID]
+            });
         }
 
         void addBindings() override {
@@ -76,14 +90,11 @@ namespace imagiro {
         // TODO: this is not realtime safe!
         // currently copying unordered maps and vectors lol
         void processCallback() override {
-            matrixFifo.try_enqueue(modMatrix.getSerializedMatrix());
-            if (sendMatrixUpdateFlagAfterNextDataLoad) {
-                sendMatrixUpdateFlagAfterNextDataLoad = false;
-                sendMatrixUpdateFlag = true;
+            sourceValuesUpdatedFlag = true;
+            const auto& sourceValues = modMatrix.getSourceValues();
+            for (const auto& [sourceID, source]: sourceValues) {
+                sourceValuesFifo.try_enqueue({sourceID, source});
             }
-
-            sourceValuesFifo.try_enqueue(modMatrix.getSourceValues());
-            targetValuesFifo.try_enqueue(modMatrix.getTargetValues());
 
             lastAudioUpdate = juce::Time::getMillisecondCounterHiRes();
         }
@@ -91,45 +102,61 @@ namespace imagiro {
         void timerCallback() override {
             const auto mostRecentVoiceIndex = modMatrix.getMostRecentVoiceIndex();
 
-            while (matrixFifo.try_dequeue(matrixMessageThread)) { /**/ }
+            if (matrixUpdatedFlag) {
+                matrixMessageThread.clearQuick();
+                SerializedMatrixEntry entry;
+
+                while (matrixFifo.try_dequeue(entry)) {
+                    matrixMessageThread.addIfNotAlreadyThere(entry);
+                }
+
+                auto matrixValue = matrixMessageThread.getState();
+                connection.eval("window.ui.modMatrixUpdated", {matrixValue});
+                matrixUpdatedFlag = false;
+            }
 
             sourceChocValues = choc::value::createObject("SourceValues");
             targetChocValues = choc::value::createObject("TargetValues");
 
-            bool sourcesUpdated = false;
-            bool targetsUpdated = false;
+            if (sourceValuesUpdatedFlag) {
+                std::pair<SourceID, std::shared_ptr<ModMatrix::SourceValue> > updatedSource;
+                while (sourceValuesFifo.try_dequeue(updatedSource)) {
+                    if (!sourceValues.contains(updatedSource.first)) {
+                        sourceValues.insert({updatedSource});
+                    } else {
+                        sourceValues[updatedSource.first] = updatedSource.second;
+                    }
 
-            while (sourceValuesFifo.try_dequeue(sourceValues)) { sourcesUpdated = true; }
-            if (sourcesUpdated) {
-                for (auto &[id, sourceValue]: sourceValues) {
-                    const auto val = sourceValue->value.getGlobalValue() + sourceValue->value.getVoiceValue(mostRecentVoiceIndex);
-                    sourceChocValues.setMember(id, val);
+                    const auto val = updatedSource.second->value.getGlobalValue()
+                                     + updatedSource.second->value.getVoiceValue(mostRecentVoiceIndex);
+                    sourceChocValues.setMember(updatedSource.first, val);
                 }
+
+                connection.eval("window.ui.sourceValuesUpdated", {
+                                    sourceChocValues, choc::value::Value(lastUIUpdate.load())
+                                });
             }
 
-            while (targetValuesFifo.try_dequeue(targetValues)) { targetsUpdated = true; }
-            if (targetsUpdated) {
-                for (auto &[id, targetValue]: targetValues) {
-                    const auto val = targetValue->value.getGlobalValue() + targetValue->value.getVoiceValue(mostRecentVoiceIndex);
-                    targetChocValues.setMember(id, val);
+            if (targetValuesUpdatedFlag) {
+                std::pair<TargetID, std::shared_ptr<ModMatrix::TargetValue> > updatedTarget;
+                while (targetValuesFifo.try_dequeue(updatedTarget)) {
+                    if (!targetValues.contains(updatedTarget.first)) {
+                        targetValues.insert({updatedTarget});
+                    } else {
+                        targetValues[updatedTarget.first] = updatedTarget.second;
+                    }
+
+                    const auto val = updatedTarget.second->value.getGlobalValue()
+                                     + updatedTarget.second->value.getVoiceValue(mostRecentVoiceIndex);
+                    targetChocValues.setMember(updatedTarget.first, val);
                 }
+
+                connection.eval("window.ui.targetValuesUpdated", {
+                                    targetChocValues, choc::value::Value(lastAudioUpdate.load())
+                                });
             }
 
             lastUIUpdate = lastAudioUpdate.load();
-
-            if (sendMatrixUpdateFlag) {
-                auto matrixValue = matrixMessageThread.getState();
-                connection.eval("window.ui.modMatrixUpdated", {matrixValue});
-                sendMatrixUpdateFlag = false;
-            }
-
-            if (sourcesUpdated) {
-               connection.eval("window.ui.sourceValuesUpdated", {sourceChocValues, choc::value::Value(lastUIUpdate.load())});
-            }
-
-            if (targetsUpdated) {
-               connection.eval("window.ui.targetValuesUpdated", {targetChocValues, choc::value::Value(lastAudioUpdate.load())});
-            }
         }
 
         void OnRecentVoiceUpdated(size_t voiceIndex) override {
@@ -141,21 +168,23 @@ namespace imagiro {
         std::atomic<double> lastUIUpdate;
 
         ModMatrix& modMatrix;
+        // ModMatrix::MatrixType matrixMessageThread;
 
         SerializedMatrix matrixMessageThread {};
-        moodycamel::ReaderWriterQueue<SerializedMatrix> matrixFifo {128};
+        moodycamel::ReaderWriterQueue<SerializedMatrixEntry> matrixFifo {128};
 
-        std::atomic<bool> sendMatrixUpdateFlag {false};
-        std::atomic<bool> sendMatrixUpdateFlagAfterNextDataLoad {false};
+        std::atomic<bool> matrixUpdatedFlag {false};
 
         choc::value::Value sourceChocValues;
         choc::value::Value targetChocValues;
 
+        std::atomic<bool> sourceValuesUpdatedFlag {false};
         std::unordered_map<SourceID, std::shared_ptr<ModMatrix::SourceValue>> sourceValues;
-        moodycamel::ReaderWriterQueue<std::unordered_map<SourceID, std::shared_ptr<ModMatrix::SourceValue>>> sourceValuesFifo {128};
+        moodycamel::ReaderWriterQueue<std::pair<SourceID, std::shared_ptr<ModMatrix::SourceValue>>> sourceValuesFifo {128};
 
+        std::atomic<bool> targetValuesUpdatedFlag {false};
         std::unordered_map<TargetID, std::shared_ptr<ModMatrix::TargetValue>> targetValues;
-        moodycamel::ReaderWriterQueue<std::unordered_map<TargetID, std::shared_ptr<ModMatrix::TargetValue>>> targetValuesFifo {128};
+        moodycamel::ReaderWriterQueue<std::pair<TargetID, std::shared_ptr<ModMatrix::TargetValue>>> targetValuesFifo {MAX_MOD_TARGETS};
 
         juce::VBlankAttachment vBlank;
 
