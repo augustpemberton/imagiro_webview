@@ -11,7 +11,6 @@
 #include "imagiro_webview/src/attachment/PluginInfoAttachment.h"
 #include "imagiro_webview/src/attachment/FileIOAttachment.h"
 #include "imagiro_webview/src/attachment/UtilAttachment.h"
-#include "imagiro_webview/src/attachment/ModMatrixAttachment.h"
 
 namespace imagiro {
     class ConnectedProcessor : public Processor {
@@ -26,7 +25,6 @@ namespace imagiro {
             addUIAttachment(pluginInfoAttachment);
             addUIAttachment(fileIOAttachment);
             addUIAttachment(utilAttachment);
-            addUIAttachment(modMatrixAttachment);
         }
 
         void addUIAttachment(UIAttachment& attachment) {
@@ -53,7 +51,6 @@ namespace imagiro {
         PluginInfoAttachment pluginInfoAttachment {*uiConnection, *this};
         FileIOAttachment fileIOAttachment {*uiConnection};
         UtilAttachment utilAttachment {*uiConnection, stringData, *this};
-        ModMatrixAttachment modMatrixAttachment {*uiConnection, modMatrix};
 
         std::vector<UIAttachment*> attachments;
     };
