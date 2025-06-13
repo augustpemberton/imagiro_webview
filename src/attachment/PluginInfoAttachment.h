@@ -331,19 +331,17 @@ namespace imagiro {
 
             connection.bind("juce_getDebugVersionString",
                                 [&](const choc::value::ValueView &args) -> choc::value::Value {
-                                    // juce::String statusString = " ";
-                                    //
-                                    // if (juce::String(git_branch_str) != "master" && juce::String(git_branch_str) !=
-                                    //                                                 "main") {
-                                    //     statusString += juce::String(git_branch_str);
-                                    // }
-                                    // statusString += "#" + juce::String(git_short_hash_str);
-                                    // if (git_dirty_str) statusString += "!";
-                                    // statusString += " (" + juce::String(build_date_str) + ")";
+                                    juce::String statusString = " ";
 
-                                    // return choc::value::Value(statusString.toStdString());
+                                    if (juce::String(git_branch_str) != "master" && juce::String(git_branch_str) !=
+                                                                                    "main") {
+                                        statusString += juce::String(git_branch_str);
+                                    }
+                                    statusString += "#" + juce::String(git_short_hash_str);
+                                    if (git_dirty_str) statusString += "!";
+                                    statusString += " (" + juce::String(build_date_str) + ")";
 
-                                    return choc::value::Value("");
+                                    return choc::value::Value(statusString.toStdString());
                                 }
             );
 
