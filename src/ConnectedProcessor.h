@@ -26,7 +26,6 @@ namespace imagiro {
             addUIAttachment(pluginInfoAttachment);
             addUIAttachment(fileIOAttachment);
             addUIAttachment(utilAttachment);
-            addUIAttachment(modMatrixAttachment);
         }
 
         void addUIAttachment(UIAttachment& attachment) {
@@ -53,7 +52,6 @@ namespace imagiro {
         PluginInfoAttachment pluginInfoAttachment {*uiConnection, *this};
         FileIOAttachment fileIOAttachment {*uiConnection};
         UtilAttachment utilAttachment {*uiConnection, stringData, *this};
-        ModMatrixAttachment modMatrixAttachment {*uiConnection, modMatrix};
 
         std::vector<UIAttachment*> attachments;
     };
