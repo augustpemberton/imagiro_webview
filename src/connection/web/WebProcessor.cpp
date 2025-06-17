@@ -42,7 +42,7 @@ namespace imagiro {
 
         e->setSize(size.x, size.y);
         if (isResizable() != ResizeType::NonResizable) {
-            e->setResizable(true, true);
+            e->setResizable(true, false);
             e->setResizeLimits(getResizeMin().x, getResizeMin().y,
                                getResizeMax().x, getResizeMax().y);
             if (isResizable() == ResizeType::FixedAspect) {
