@@ -11,7 +11,6 @@
 #include "imagiro_webview/src/attachment/PluginInfoAttachment.h"
 #include "imagiro_webview/src/attachment/FileIOAttachment.h"
 #include "imagiro_webview/src/attachment/UtilAttachment.h"
-#include "imagiro_webview/src/attachment/ModMatrixAttachment.h"
 
 namespace imagiro {
     class ConnectedProcessor : public Processor {

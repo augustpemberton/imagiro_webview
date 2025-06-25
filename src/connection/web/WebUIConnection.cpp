@@ -85,6 +85,15 @@ namespace imagiro {
                       return {};
                   })
         );
+        view.bind("juce_getWindowScreenPosition",
+            wrapFn([editor](const choc::value::ValueView &args) -> choc::value::Value {
+                auto dims = choc::value::createObject("WindowScreenPosition");
+                auto const screenPos = editor->getScreenPosition();
+                dims.setMember("x", screenPos.x);
+                dims.setMember("y", screenPos.y);
+                return dims;
+            })
+        );
     }
 
     void WebUIConnection::navigate(const std::string &url) {
