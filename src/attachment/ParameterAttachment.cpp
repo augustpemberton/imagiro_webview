@@ -69,7 +69,7 @@ void imagiro::ParameterAttachment::addBindings() {
                 return choc::value::Value(param->getValue());
             });
     connection.bind(
-            "juce_updatePluginParameter",
+            "juce_setPluginParameterValue01",
             [&](const choc::value::ValueView &args) -> choc::value::Value {
                 auto paramID = args[0].getWithDefault("");
                 auto newValue01 = args[1].getWithDefault(0.);
@@ -77,11 +77,25 @@ void imagiro::ParameterAttachment::addBindings() {
                 auto param = processor.getParameter(paramID);
                 if (param) {
                     param->setValueAndNotifyHost(juce::jlimit(0.f, 1.f, (float)newValue01));
-
                 }
 
                 return choc::value::Value(param->getValue());
             });
+
+    connection.bind(
+            "juce_setPluginParameterUserValue",
+            [&](const choc::value::ValueView &args) -> choc::value::Value {
+                auto paramID = args[0].getWithDefault("");
+                auto newUserValue = args[1].getWithDefault(0.);
+
+                auto param = processor.getParameter(paramID);
+                if (param) {
+                    param->setUserValueAndNotifyHost(newUserValue);
+                }
+
+                return choc::value::Value(param->getValue());
+            });
+
     connection.bind(
             "juce_setPluginParameterLocked",
             [&](const choc::value::ValueView &args) -> choc::value::Value {
@@ -123,6 +137,16 @@ void imagiro::ParameterAttachment::addBindings() {
                 if (!param) return {};
 
                 auto uv = param->getUserValue();
+                return choc::value::Value(uv);
+            });
+
+    connection.bind(
+            "juce_getModUserValue",
+            [&](const choc::value::ValueView &args) -> choc::value::Value {
+                auto param = processor.getParameter(args[0].toString());
+                if (!param) return {};
+
+                auto uv = param->getModUserValue();
                 return choc::value::Value(uv);
             });
 
