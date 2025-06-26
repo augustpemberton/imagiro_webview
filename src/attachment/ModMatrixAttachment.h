@@ -10,10 +10,12 @@ namespace imagiro {
     class ModMatrixAttachment : public UIAttachment, ModMatrix::Listener, juce::Timer {
     private:
         // Cached choc::value objects for reuse
-        choc::value::Value cachedSourcesValue;
+        choc::value::Value cachedSourceDefs;
         choc::value::Value cachedTargetsValue;
-        bool sourcesValueInitialized = false;
-        bool targetsValueInitialized = false;
+        bool sourceDefNeedsRefresh = false;
+        bool sourceDefRefreshReady = false;
+        bool targetDefNeedsRefresh = false;
+        bool targetDefRefreshReady = false;
         bool emptyValueInitialized = false;
 
     public:
@@ -29,8 +31,8 @@ namespace imagiro {
         }
 
         void OnMatrixUpdated() override {
-            sourcesValueInitialized = false;
-            targetsValueInitialized = false;
+            sourceDefNeedsRefresh = true;
+            targetDefNeedsRefresh = true;
 
             const auto& matrix = modMatrix.getSerializedMatrix();
             for (const auto& entry : matrix) {
@@ -78,7 +80,7 @@ namespace imagiro {
             });
 
             connection.bind("juce_getSourceValues", [&](const choc::value::ValueView& args) -> choc::value::Value {
-                return getCachedSourceValues();
+                return getCachedSourceDefs();
             });
 
             connection.bind("juce_getTargetValues", [&](const choc::value::ValueView& args) -> choc::value::Value {
@@ -86,15 +88,12 @@ namespace imagiro {
             });
         }
 
-        // call each processBlock tick
-        // TODO: this is not realtime safe!
-        // currently copying unordered maps and vectors lol
         void processCallback() override {
-            sourceValuesUpdatedFlag = true;
             const auto& sourceValues = modMatrix.getSourceValues();
             for (const auto& [sourceID, source]: sourceValues) {
                 sourceValuesFifo.try_enqueue({sourceID, source});
             }
+            sourceValuesUpdatedFlag = true;
 
             lastAudioUpdate = juce::Time::getMillisecondCounterHiRes();
         }
@@ -119,6 +118,7 @@ namespace imagiro {
             targetChocValues = choc::value::createObject("TargetValues");
 
             if (sourceValuesUpdatedFlag) {
+                sourceValues.clear();
                 std::pair<SourceID, std::shared_ptr<ModMatrix::SourceValue> > updatedSource;
                 while (sourceValuesFifo.try_dequeue(updatedSource)) {
                     if (!sourceValues.contains(updatedSource.first)) {
@@ -135,6 +135,11 @@ namespace imagiro {
                 connection.eval("window.ui.sourceValuesUpdated", {
                                     sourceChocValues, choc::value::Value(lastUIUpdate.load())
                                 });
+
+                if (sourceDefNeedsRefresh) {
+                    sourceDefNeedsRefresh = false;
+                    sourceDefRefreshReady = true;
+                }
             }
 
             if (targetValuesUpdatedFlag) {
@@ -154,6 +159,11 @@ namespace imagiro {
                 connection.eval("window.ui.targetValuesUpdated", {
                                     targetChocValues, choc::value::Value(lastAudioUpdate.load())
                                 });
+
+                if (targetDefNeedsRefresh) {
+                    targetDefNeedsRefresh = false;
+                    targetDefRefreshReady = true;
+                }
             }
 
             lastUIUpdate = lastAudioUpdate.load();
@@ -188,21 +198,22 @@ namespace imagiro {
 
         juce::VBlankAttachment vBlank;
 
-        choc::value::Value& getCachedSourceValues() {
-            if (!sourcesValueInitialized) {
-                cachedSourcesValue = choc::value::createObject("");
+        choc::value::Value& getCachedSourceDefs() {
+            if (sourceDefRefreshReady) {
+                sourceDefRefreshReady = false;
+                cachedSourceDefs = choc::value::createObject("");
 
                 for (const auto& [sourceID, source] : sourceValues) {
-                    cachedSourcesValue.addMember(sourceID, source->getState());
+                    cachedSourceDefs.addMember(sourceID, source->getState());
                 }
-                cachedSourcesValue.addMember("time", lastUIUpdate.load());
-                sourcesValueInitialized = true;
+                cachedSourceDefs.addMember("time", lastUIUpdate.load());
             }
-            return cachedSourcesValue;
+            return cachedSourceDefs;
         }
 
         choc::value::Value& getCachedTargetValues() {
-            if (!targetsValueInitialized) {
+            if (targetDefRefreshReady) {
+                targetDefRefreshReady = false;
                 cachedTargetsValue = choc::value::createObject("");
 
                 for (const auto& [targetID, target] : targetValues) {
@@ -210,7 +221,6 @@ namespace imagiro {
                     cachedTargetsValue.addMember(targetID, v);
                 }
                 cachedTargetsValue.addMember("time", lastUIUpdate.load());
-                targetsValueInitialized = true;
             }
             return cachedTargetsValue;
         }
