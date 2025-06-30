@@ -137,6 +137,7 @@ void imagiro::ParameterAttachment::addBindings() {
                 if (!param) return {};
 
                 auto uv = param->getUserValue();
+                if (!param->getConfig()->choices.empty()) uv *= param->getConfig()->choices.size() - 1;
                 return choc::value::Value(uv);
             });
 
@@ -147,6 +148,7 @@ void imagiro::ParameterAttachment::addBindings() {
                 if (!param) return {};
 
                 auto uv = param->getModUserValue();
+                if (!param->getConfig()->choices.empty()) uv *= param->getConfig()->choices.size() - 1;
                 return choc::value::Value(uv);
             });
 
