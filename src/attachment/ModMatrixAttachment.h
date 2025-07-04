@@ -12,11 +12,10 @@ namespace imagiro {
         // Cached choc::value objects for reuse
         choc::value::Value cachedSourceDefs;
         choc::value::Value cachedTargetsValue;
-        bool sourceDefNeedsRefresh = false;
+        bool sourceDefNeedsRefresh = true;
         bool sourceDefRefreshReady = false;
-        bool targetDefNeedsRefresh = false;
+        bool targetDefNeedsRefresh = true;
         bool targetDefRefreshReady = false;
-        bool emptyValueInitialized = false;
 
     public:
         ModMatrixAttachment(UIConnection& connection, ModMatrix& matrix)
@@ -118,8 +117,7 @@ namespace imagiro {
             targetChocValues = choc::value::createObject("TargetValues");
 
             if (sourceValuesUpdatedFlag) {
-                sourceValues.clear();
-                std::pair<SourceID, std::shared_ptr<ModMatrix::SourceValue> > updatedSource;
+                std::pair<SourceID, std::shared_ptr<ModMatrix::SourceValue>> updatedSource;
                 while (sourceValuesFifo.try_dequeue(updatedSource)) {
                     if (!sourceValues.contains(updatedSource.first)) {
                         sourceValues.insert({updatedSource});
