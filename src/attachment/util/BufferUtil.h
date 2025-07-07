@@ -99,7 +99,10 @@ static VisualizerData getVisualizerDataMacro (
             auto min = 999.f;
 
             // TODO this is pretty inaccurate
-            auto interval = std::max(1, (inEnd - inStart) / 300);
+            // if zoomed out, skip over some samples (max 600 samples tested for each pixel chunk)
+            // otherwise its pretty slow as we don't have any caching mechanism
+            auto interval = std::max(1, (inEnd - inStart) / 600);
+            // auto interval = 1;
 
             for (auto s2 = inStart; s2 < inEnd; s2+=interval) {
                 auto sample = in.getSample(c, s2);

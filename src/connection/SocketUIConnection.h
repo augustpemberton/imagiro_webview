@@ -115,7 +115,7 @@ namespace imagiro
             startTimerHz(20);
         }
 
-        void bind(const std::string& functionName, CallbackFn&& callback) override
+        void bindFunction(const std::string& functionName, CallbackFn&& callback) override
         {
             boundFunctions.insert({functionName, callback});
         }
@@ -152,7 +152,7 @@ namespace imagiro
             }
         }
 
-        void eval(const std::string& functionName, const std::vector<choc::value::Value>& args) override
+        void evalFunction(const std::string& functionName, const std::vector<choc::value::Value>& args) override
         {
             try
             {
@@ -180,7 +180,6 @@ namespace imagiro
         choc::network::HTTPServer server;
         AssetServer& assetServer;
 
-        std::unordered_map<std::string, CallbackFn> boundFunctions;
 
         moodycamel::ConcurrentQueue<std::string> jsEvalQueue{512};
 

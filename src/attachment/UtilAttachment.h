@@ -6,19 +6,33 @@
 #include "UIAttachment.h"
 #include "choc/text/choc_JSON.h"
 #include "imagiro_processor/imagiro_processor.h"
+#include "imagiro_util/src/BackgroundTaskRunner.h"
 
 namespace imagiro {
-    class UtilAttachment : public UIAttachment, StringData::Listener {
+    class UtilAttachment : public UIAttachment, StringData::Listener, BackgroundTaskRunner::Listener {
     public:
-        UtilAttachment(UIConnection& c, StringData& u, Processor& p)
-                : UIAttachment(c), uiData(u), processor(p) {
+        UtilAttachment(UIConnection& c, Processor& p)
+                : UIAttachment(c), processor(p) {
+            backgroundTaskRunner.addListener(this);
+            processor.getStringData().addListener(this);
+        }
 
+        ~UtilAttachment() override {
+            backgroundTaskRunner.removeListener(this);
+            processor.getStringData().removeListener(this);
         }
 
         void OnStringDataUpdated(StringData& data, const std::string &key, const std::string &newValue) override {
             connection.eval("window.ui.processorValueUpdated", {
                 choc::value::Value{key},
                 choc::value::Value{newValue}
+            });
+        }
+
+        void OnTaskFinished(int taskID, const choc::value::ValueView &result) override {
+            connection.eval("window.ui.onBackgroundTaskFinished", {
+                choc::value::Value{taskID},
+                choc::value::Value{result}
             });
         }
 
@@ -61,7 +75,7 @@ namespace imagiro {
                         const auto value = std::string(args[1].getWithDefault(""));
                         const auto saveInPreset = args[2].getWithDefault(false);
 
-                        uiData.set(key, value, saveInPreset);
+                        processor.getStringData().set(key, value, saveInPreset);
 
                         return {};
                     });
@@ -71,7 +85,7 @@ namespace imagiro {
                         auto key = std::string(args[0].getWithDefault(""));
                         if (key.empty()) return {};
 
-                        auto val = uiData.get(key);
+                        auto val = processor.getStringData().get(key);
                         if (!val) return {};
                         return choc::value::Value(*val);
                     });
@@ -160,11 +174,30 @@ namespace imagiro {
                 connection.eval("window.ui.onSignal", v);
                 return {};
             });
+
+            connection.bind("juce_Test", [&](const choc::value::ValueView& args) -> choc::value::Value {
+                return choc::value::Value("hello world");
+            });
+
+            connection.bind("juce_onBackgroundThread", [&](const choc::value::ValueView& args) -> choc::value::Value {
+                const auto fnName = std::string(args[0].getWithDefault(""));
+                const auto fnArgs = choc::value::Value(args[1]);
+
+                if (!connection.getBoundFunctions().contains(fnName)) return {};
+                const auto underlyingFn = connection.getBoundFunctions().at(fnName);
+
+                const auto jobID = backgroundTaskRunner.queueTask({
+                    [underlyingFn, fnArgs] {
+                        return underlyingFn(fnArgs);
+                    }
+                });
+
+                return choc::value::Value{jobID};
+            });
         }
 
     private:
-        StringData& uiData;
         Processor& processor;
-
+        BackgroundTaskRunner backgroundTaskRunner;
     };
 }

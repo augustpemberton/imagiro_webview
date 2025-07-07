@@ -8,10 +8,10 @@
 namespace imagiro {
     class DummyUIConnection : public UIConnection {
     public:
-        void bind(const std::string &functionName, CallbackFn&& callback) override {
+        void bindFunction(const std::string &functionName, CallbackFn&& callback) override {
             //
         };
-        void eval(const std::string &functionName, const std::vector<choc::value::ValueView>& args = {}) {
+        void evalFunction(const std::string &functionName, const std::vector<choc::value::ValueView>& args) {
             //
         }
     };

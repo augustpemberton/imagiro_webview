@@ -27,8 +27,8 @@ namespace imagiro {
 
         static void bindEditorSpecificFunctions(choc::ui::WebView& view, WebUIPluginEditor* editor);
 
-        void eval(const std::string &functionName, const std::vector<choc::value::Value> &args = {}) override;
-        void bind(const std::string &functionName, CallbackFn&& callback) override;
+        void evalFunction(const std::string &functionName, const std::vector<choc::value::Value> &args = {}) override;
+        void bindFunction(const std::string &functionName, CallbackFn&& callback) override;
 
         void requestFileChooser(juce::String patternsAllowed = "*.wav");
 

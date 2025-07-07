@@ -50,7 +50,7 @@ namespace imagiro {
         PresetAttachment presetAttachment {*uiConnection, *this};
         PluginInfoAttachment pluginInfoAttachment {*uiConnection, *this};
         FileIOAttachment fileIOAttachment {*uiConnection};
-        UtilAttachment utilAttachment {*uiConnection, stringData, *this};
+        UtilAttachment utilAttachment {*uiConnection, *this};
 
         std::vector<UIAttachment*> attachments;
     };
