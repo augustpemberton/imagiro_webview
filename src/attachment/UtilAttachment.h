@@ -9,20 +9,20 @@
 #include "imagiro_util/src/BackgroundTaskRunner.h"
 
 namespace imagiro {
-    class UtilAttachment : public UIAttachment, StringData::Listener, BackgroundTaskRunner::Listener {
+    class UtilAttachment : public UIAttachment, ValueData::Listener, BackgroundTaskRunner::Listener {
     public:
         UtilAttachment(UIConnection& c, Processor& p)
                 : UIAttachment(c), processor(p) {
             backgroundTaskRunner.addListener(this);
-            processor.getStringData().addListener(this);
+            processor.getValueData().addListener(this);
         }
 
         ~UtilAttachment() override {
             backgroundTaskRunner.removeListener(this);
-            processor.getStringData().removeListener(this);
+            processor.getValueData().removeListener(this);
         }
 
-        void OnStringDataUpdated(StringData& data, const std::string &key, const std::string &newValue) override {
+        void OnValueDataUpdated(ValueData& data, const std::string &key, const choc::value::ValueView &newValue) override {
             connection.eval("window.ui.processorValueUpdated", {
                 choc::value::Value{key},
                 choc::value::Value{newValue}
@@ -70,24 +70,24 @@ namespace imagiro {
 
             connection.bind(
                     "juce_saveInProcessor", [&](const choc::value::ValueView &args) -> choc::value::Value {
-                        auto key = std::string(args[0].getWithDefault(""));
+                        const auto key = std::string(args[0].getWithDefault(""));
                         if (key.empty()) return {};
-                        const auto value = std::string(args[1].getWithDefault(""));
+                        const auto value = args[1];
                         const auto saveInPreset = args[2].getWithDefault(false);
 
-                        processor.getStringData().set(key, value, saveInPreset);
+                        processor.getValueData().set(key, value, saveInPreset);
 
                         return {};
                     });
 
             connection.bind(
                     "juce_loadFromProcessor", [&](const choc::value::ValueView &args) -> choc::value::Value {
-                        auto key = std::string(args[0].getWithDefault(""));
+                        const auto key = std::string(args[0].getWithDefault(""));
                         if (key.empty()) return {};
 
-                        auto val = processor.getStringData().get(key);
+                        auto val = processor.getValueData().get(key);
                         if (!val) return {};
-                        return choc::value::Value(*val);
+                        return *val;
                     });
 
             connection.bind(

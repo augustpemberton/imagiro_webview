@@ -51,8 +51,8 @@ namespace imagiro {
 
         void addBindings() override {
             connection.bind("juce_updateModulation", [&](const choc::value::ValueView& args) -> choc::value::Value {
-                auto sourceID = args[0].getWithDefault("");
-                auto targetID = args[1].getWithDefault("");
+                auto sourceID = args[0].getWithDefault(0);
+                auto targetID = args[1].getWithDefault(0);
                 auto depth = args[2].getWithDefault(0.f);
 
                 auto attackMS = args.size() > 3 ? args[3].getWithDefault(0.f) : 0.f;
@@ -66,8 +66,8 @@ namespace imagiro {
             });
 
             connection.bind("juce_removeModulation", [&](const choc::value::ValueView& args) -> choc::value::Value {
-                auto sourceID = args[0].getWithDefault("");
-                auto targetID = args[1].getWithDefault("");
+                auto sourceID = args[0].getWithDefault(0);
+                auto targetID = args[1].getWithDefault(0);
 
                 modMatrix.removeConnection(sourceID, targetID);
 
@@ -127,7 +127,7 @@ namespace imagiro {
 
                     const auto val = updatedSource.second->value.getGlobalValue()
                                      + updatedSource.second->value.getVoiceValue(mostRecentVoiceIndex);
-                    sourceChocValues.setMember(updatedSource.first, val);
+                    sourceChocValues.setMember(std::to_string(updatedSource.first), val);
                 }
 
                 connection.eval("window.ui.sourceValuesUpdated", {
@@ -151,7 +151,7 @@ namespace imagiro {
 
                     const auto val = updatedTarget.second->value.getGlobalValue()
                                      + updatedTarget.second->value.getVoiceValue(mostRecentVoiceIndex);
-                    targetChocValues.setMember(updatedTarget.first, val);
+                    targetChocValues.setMember(std::to_string(updatedTarget.first), val);
                 }
 
                 connection.eval("window.ui.targetValuesUpdated", {
@@ -202,7 +202,7 @@ namespace imagiro {
                 cachedSourceDefs = choc::value::createObject("");
 
                 for (const auto& [sourceID, source] : sourceValues) {
-                    cachedSourceDefs.addMember(sourceID, source->getState());
+                    cachedSourceDefs.addMember(std::to_string(sourceID), source->getState());
                 }
                 cachedSourceDefs.addMember("time", lastUIUpdate.load());
             }
@@ -216,7 +216,7 @@ namespace imagiro {
 
                 for (const auto& [targetID, target] : targetValues) {
                     const auto v = target->getState();
-                    cachedTargetsValue.addMember(targetID, v);
+                    cachedTargetsValue.addMember(std::to_string(targetID), v);
                 }
                 cachedTargetsValue.addMember("time", lastUIUpdate.load());
             }
