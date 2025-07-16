@@ -49,6 +49,12 @@ namespace imagiro {
             });
         }
 
+        void OnSourceValueUpdated(const SourceID& sourceID) override {
+            const auto& sourceValue = modMatrix.getSourceValues().at(sourceID);
+            sourceValuesFifo.try_enqueue({sourceID, sourceValue});
+            sourceValuesUpdatedFlag = true;
+        }
+
         void addBindings() override {
             connection.bind("juce_updateModulation", [&](const choc::value::ValueView& args) -> choc::value::Value {
                 auto sourceID = args[0].getWithDefault(0);
@@ -87,16 +93,6 @@ namespace imagiro {
             });
         }
 
-        void processCallback() override {
-            const auto& sourceValues = modMatrix.getSourceValues();
-            for (const auto& [sourceID, source]: sourceValues) {
-                sourceValuesFifo.try_enqueue({sourceID, source});
-            }
-            sourceValuesUpdatedFlag = true;
-
-            lastAudioUpdate = juce::Time::getMillisecondCounterHiRes();
-        }
-
         void timerCallback() override {
             const auto mostRecentVoiceIndex = modMatrix.getMostRecentVoiceIndex();
 
@@ -117,6 +113,7 @@ namespace imagiro {
             targetChocValues = choc::value::createObject("TargetValues");
 
             if (sourceValuesUpdatedFlag) {
+                sourceValuesUpdatedFlag = false;
                 std::pair<SourceID, std::shared_ptr<ModMatrix::SourceValue>> updatedSource;
                 while (sourceValuesFifo.try_dequeue(updatedSource)) {
                     if (!sourceValues.contains(updatedSource.first)) {
@@ -131,8 +128,8 @@ namespace imagiro {
                 }
 
                 connection.eval("window.ui.sourceValuesUpdated", {
-                                    sourceChocValues, choc::value::Value(lastUIUpdate.load())
-                                });
+                    sourceChocValues
+                });
 
                 if (sourceDefNeedsRefresh) {
                     sourceDefNeedsRefresh = false;
@@ -141,6 +138,7 @@ namespace imagiro {
             }
 
             if (targetValuesUpdatedFlag) {
+                targetValuesUpdatedFlag = false;
                 std::pair<TargetID, std::shared_ptr<ModMatrix::TargetValue> > updatedTarget;
                 while (targetValuesFifo.try_dequeue(updatedTarget)) {
                     if (!targetValues.contains(updatedTarget.first)) {
@@ -154,17 +152,13 @@ namespace imagiro {
                     targetChocValues.setMember(std::to_string(updatedTarget.first), val);
                 }
 
-                connection.eval("window.ui.targetValuesUpdated", {
-                                    targetChocValues, choc::value::Value(lastAudioUpdate.load())
-                                });
+                connection.eval("window.ui.targetValuesUpdated", { targetChocValues });
 
                 if (targetDefNeedsRefresh) {
                     targetDefNeedsRefresh = false;
                     targetDefRefreshReady = true;
                 }
             }
-
-            lastUIUpdate = lastAudioUpdate.load();
         }
 
         void OnRecentVoiceUpdated(size_t voiceIndex) override {
@@ -172,8 +166,6 @@ namespace imagiro {
         }
 
     private:
-        std::atomic<double> lastAudioUpdate;
-        std::atomic<double> lastUIUpdate;
 
         ModMatrix& modMatrix;
         // ModMatrix::MatrixType matrixMessageThread;
@@ -204,7 +196,6 @@ namespace imagiro {
                 for (const auto& [sourceID, source] : sourceValues) {
                     cachedSourceDefs.addMember(std::to_string(sourceID), source->getState());
                 }
-                cachedSourceDefs.addMember("time", lastUIUpdate.load());
             }
             return cachedSourceDefs;
         }
@@ -218,7 +209,6 @@ namespace imagiro {
                     const auto v = target->getState();
                     cachedTargetsValue.addMember(std::to_string(targetID), v);
                 }
-                cachedTargetsValue.addMember("time", lastUIUpdate.load());
             }
             return cachedTargetsValue;
         }
