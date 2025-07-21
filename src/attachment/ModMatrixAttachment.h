@@ -8,14 +8,6 @@
 namespace imagiro {
 
     class ModMatrixAttachment : public UIAttachment, ModMatrix::Listener, juce::Timer {
-    private:
-        // Cached choc::value objects for reuse
-        choc::value::Value cachedSourceDefs;
-        choc::value::Value cachedTargetsValue;
-        bool sourceDefNeedsRefresh = true;
-        bool sourceDefRefreshReady = false;
-        bool targetDefNeedsRefresh = true;
-        bool targetDefRefreshReady = false;
 
     public:
         ModMatrixAttachment(UIConnection& connection, ModMatrix& matrix)
@@ -29,30 +21,85 @@ namespace imagiro {
             modMatrix.removeListener(this);
         }
 
-        void OnMatrixUpdated() override {
-            sourceDefNeedsRefresh = true;
-            targetDefNeedsRefresh = true;
-
-            const auto& matrix = modMatrix.getSerializedMatrix();
-            for (const auto& entry : matrix) {
-                matrixFifo.enqueue(entry);
-            }
-
-            matrixUpdatedFlag = true;
-        }
-
-        void OnTargetValueUpdated(const TargetID &targetID) override {
-            targetValuesUpdatedFlag = true;
-
-            targetValuesFifo.try_enqueue({
-                targetID, modMatrix.getTargetValues()[targetID]
+        void OnConnectionAdded(const SourceID& source, const TargetID& target) override {
+            const auto connection = modMatrix.getMatrix()[{source, target}];
+            matrixCommands.try_enqueue({
+                ChangeCommandType::Added,
+                {
+                    source,
+                    target,
+                    connection.getSettings().depth,
+                    connection.getSettings().attackMS,
+                    connection.getSettings().releaseMS,
+                }
             });
         }
 
-        void OnSourceValueUpdated(const SourceID& sourceID) override {
-            const auto& sourceValue = modMatrix.getSourceValues().at(sourceID);
-            sourceValuesFifo.try_enqueue({sourceID, sourceValue});
-            sourceValuesUpdatedFlag = true;
+        void OnConnectionUpdated(const SourceID& source, const TargetID& target) override {
+            const auto connection = modMatrix.getMatrix()[{source, target}];
+            matrixCommands.try_enqueue({
+                ChangeCommandType::Updated,
+                {
+                    source,
+                    target,
+                    connection.getSettings().depth,
+                    connection.getSettings().attackMS,
+                    connection.getSettings().releaseMS,
+                }
+            });
+        }
+
+        void OnConnectionRemoved(const SourceID& source, const TargetID& target) override {
+            matrixCommands.try_enqueue({ChangeCommandType::Removed, { source, target }});
+        }
+
+        void OnSourceValueAdded(const SourceID& sourceID) override {
+            const auto source = modMatrix.getSourceValues()[sourceID];
+            sourceCommands.try_enqueue({
+                ChangeCommandType::Added,
+                sourceID,
+                0, 0,
+                source->name,
+                source->bipolar
+            });
+        }
+
+        void OnSourceValueUpdated(const SourceID& sourceID, const int voiceIndex) override {
+            const auto source = modMatrix.getSourceValues()[sourceID];
+            sourceCommands.try_enqueue({
+                ChangeCommandType::Added,
+                sourceID,
+                voiceIndex < 0 ? source->value.getGlobalValue() : source->value.getVoiceValue(voiceIndex),
+                voiceIndex,
+                source->name,
+                source->bipolar
+            });
+        }
+
+        void OnSourceValueRemoved(const SourceID& sourceID) override {
+            sourceCommands.try_enqueue({ ChangeCommandType::Removed, sourceID });
+        }
+
+        void OnTargetValueAdded(const TargetID& targetID) override {
+            targetCommands.try_enqueue({ ChangeCommandType::Added, targetID });
+        }
+
+        void OnTargetValueUpdated(const TargetID& targetID, const int voiceIndex) override {
+            const auto target = modMatrix.getTargetValues()[targetID];
+            targetCommands.try_enqueue({
+                ChangeCommandType::Updated,
+                targetID,
+                voiceIndex < 0 ? target->value.getGlobalValue() : target->value.getVoiceValue(voiceIndex),
+                voiceIndex
+            });
+        }
+
+        void OnTargetValueReset(const TargetID& targetID) override {
+            targetCommands.try_enqueue({ ChangeCommandType::Reset, targetID });
+        }
+
+        void OnTargetValueRemoved(const TargetID& targetID) override {
+            targetCommands.try_enqueue({ ChangeCommandType::Removed, targetID });
         }
 
         void addBindings() override {
@@ -64,9 +111,7 @@ namespace imagiro {
                 auto attackMS = args.size() > 3 ? args[3].getWithDefault(0.f) : 0.f;
                 auto releaseMS = args.size() > 4 ? args[4].getWithDefault(0.f) : 0.f;
 
-                auto bipolar = args.size() > 5 ? args[5].getWithDefault(false) : false;
-
-                modMatrix.setConnection(sourceID, targetID, {depth, attackMS, releaseMS, bipolar});
+                modMatrix.queueConnection(sourceID, targetID, {depth, attackMS, releaseMS});
 
                 return {};
             });
@@ -85,132 +130,175 @@ namespace imagiro {
             });
 
             connection.bind("juce_getSourceValues", [&](const choc::value::ValueView& args) -> choc::value::Value {
-                return getCachedSourceDefs();
+                return getSourceDefs();
             });
 
             connection.bind("juce_getTargetValues", [&](const choc::value::ValueView& args) -> choc::value::Value {
-                return getCachedTargetValues();
+                return getTargetDefs();
             });
         }
 
         void timerCallback() override {
-            const auto mostRecentVoiceIndex = modMatrix.getMostRecentVoiceIndex();
+            processMatrixCommands();
+            processSourceCommands();
+            processTargetCommands();
+        }
 
-            if (matrixUpdatedFlag) {
-                matrixMessageThread.clearQuick();
-                SerializedMatrixEntry entry;
-
-                while (matrixFifo.try_dequeue(entry)) {
-                    matrixMessageThread.addIfNotAlreadyThere(entry);
+        void processMatrixCommands() {
+            MatrixChangeCommand command {};
+            bool updated {false};
+            while (matrixCommands.try_dequeue(command)) {
+                updated = true;
+                if (command.type == ChangeCommandType::Added) {
+                    matrixMessageThread.addIfNotAlreadyThere(command.entry);
+                } else if (command.type == ChangeCommandType::Removed) {
+                    matrixMessageThread.removeFirstMatchingValue(command.entry);
+                } else if (command.type == ChangeCommandType::Updated) {
+                    for (auto& entry : matrixMessageThread) {
+                        if (entry.sourceID == command.entry.sourceID &&
+                            entry.targetID == command.entry.targetID) {
+                            entry = command.entry;
+                        }
+                    }
                 }
-
-                auto matrixValue = matrixMessageThread.getState();
-                connection.eval("window.ui.modMatrixUpdated", {matrixValue});
-                matrixUpdatedFlag = false;
             }
 
-            sourceChocValues = choc::value::createObject("SourceValues");
-            targetChocValues = choc::value::createObject("TargetValues");
-
-            if (sourceValuesUpdatedFlag) {
-                sourceValuesUpdatedFlag = false;
-                std::pair<SourceID, std::shared_ptr<ModMatrix::SourceValue>> updatedSource;
-                while (sourceValuesFifo.try_dequeue(updatedSource)) {
-                    if (!sourceValues.contains(updatedSource.first)) {
-                        sourceValues.insert({updatedSource});
-                    } else {
-                        sourceValues[updatedSource.first] = updatedSource.second;
-                    }
-
-                    const auto val = updatedSource.second->value.getGlobalValue()
-                                     + updatedSource.second->value.getVoiceValue(mostRecentVoiceIndex);
-                    sourceChocValues.setMember(std::to_string(updatedSource.first), val);
-                }
-
-                connection.eval("window.ui.sourceValuesUpdated", {
-                    sourceChocValues
+            if (updated) {
+                connection.eval("window.ui.modMatrixUpdated", {
+                    matrixMessageThread.getState()
                 });
+            }
+        }
 
-                if (sourceDefNeedsRefresh) {
-                    sourceDefNeedsRefresh = false;
-                    sourceDefRefreshReady = true;
+        void processSourceCommands() {
+            SourceChangeCommand command {};
+            bool updated = false;
+            while (sourceCommands.try_dequeue(command)) {
+                updated = true;
+                if (command.type == ChangeCommandType::Added) {
+                    sourceValues.insert({ command.id, { command.name, command.bipolar } });
+                } else if (command.type == ChangeCommandType::Updated) {
+                    jassert(sourceValues.contains(command.id));
+                    sourceValues[command.id].bipolar = command.bipolar;
+                    if (command.voiceIndex < 0) {
+                        sourceValues[command.id].value.setGlobalValue(command.value);
+                    } else {
+                        sourceValues[command.id].value.setVoiceValue(command.value, command.voiceIndex);
+                    }
+
+                    auto mostRecentVoiceValue = sourceValues[command.id].value.getGlobalValue() +
+                        sourceValues[command.id].value.getVoiceValue(mostRecentVoice);
+
+                    connection.eval("window.ui.sourceValueUpdated", {
+                        choc::value::Value(command.id),
+                        choc::value::Value(static_cast<int>(mostRecentVoice)),
+                        choc::value::Value(mostRecentVoiceValue)
+                    });
+
+                } else if (command.type == ChangeCommandType::Removed) {
+                    sourceValues.erase(command.id);
                 }
             }
 
-            if (targetValuesUpdatedFlag) {
-                targetValuesUpdatedFlag = false;
-                std::pair<TargetID, std::shared_ptr<ModMatrix::TargetValue> > updatedTarget;
-                while (targetValuesFifo.try_dequeue(updatedTarget)) {
-                    if (!targetValues.contains(updatedTarget.first)) {
-                        targetValues.insert({updatedTarget});
+            if (updated) {
+            }
+        }
+
+        void processTargetCommands() {
+            TargetChangeCommand command {};
+            while (targetCommands.try_dequeue(command)) {
+                if (command.type == ChangeCommandType::Added) {
+                    targetValues.insert({command.id, {}});
+                } else if (command.type == ChangeCommandType::Updated) {
+                    if (!targetValues.contains(command.id)) targetValues.insert({command.id, {}});
+                    if (command.voiceIndex < 0) {
+                        targetValues[command.id].value.setGlobalValue(command.value);
                     } else {
-                        targetValues[updatedTarget.first] = updatedTarget.second;
+                        targetValues[command.id].value.setVoiceValue(command.value, command.voiceIndex);
                     }
 
-                    const auto val = updatedTarget.second->value.getGlobalValue()
-                                     + updatedTarget.second->value.getVoiceValue(mostRecentVoiceIndex);
-                    targetChocValues.setMember(std::to_string(updatedTarget.first), val);
-                }
+                    auto mostRecentVoiceValue = targetValues[command.id].value.getGlobalValue() +
+                        targetValues[command.id].value.getVoiceValue(mostRecentVoice);
 
-                connection.eval("window.ui.targetValuesUpdated", { targetChocValues });
+                    connection.eval("window.ui.targetValueUpdated", {
+                        choc::value::Value(command.id),
+                        choc::value::Value(static_cast<int>(mostRecentVoice)),
+                        choc::value::Value(mostRecentVoiceValue)
+                    });
+                } else if (command.type == ChangeCommandType::Reset) {
+                    jassert(targetValues.contains(command.id));
+                    targetValues[command.id].value.resetValue();
 
-                if (targetDefNeedsRefresh) {
-                    targetDefNeedsRefresh = false;
-                    targetDefRefreshReady = true;
+                    connection.eval("window.ui.targetValueUpdated", {
+                        choc::value::Value(command.id),
+                        choc::value::Value(static_cast<int>(mostRecentVoice)),
+                        choc::value::Value(0)
+                    });
+
+                } else if (command.type == ChangeCommandType::Removed) {
+                    targetValues.erase(command.id);
                 }
             }
         }
 
         void OnRecentVoiceUpdated(size_t voiceIndex) override {
+            mostRecentVoice = voiceIndex;
             connection.eval("window.ui.onRecentVoiceUpdated", {choc::value::Value((int)voiceIndex)});
         }
 
     private:
-
         ModMatrix& modMatrix;
-        // ModMatrix::MatrixType matrixMessageThread;
+
+        size_t mostRecentVoice;
 
         SerializedMatrix matrixMessageThread {};
-        moodycamel::ReaderWriterQueue<SerializedMatrixEntry> matrixFifo {128};
+        std::unordered_map<SourceID, ModMatrix::SourceValue> sourceValues;
+        std::unordered_map<TargetID, ModMatrix::TargetValue> targetValues;
 
-        std::atomic<bool> matrixUpdatedFlag {false};
+        enum class ChangeCommandType {
+            Added, Removed, Updated, Reset
+        };
 
-        choc::value::Value sourceChocValues;
-        choc::value::Value targetChocValues;
+        struct MatrixChangeCommand {
+            ChangeCommandType type;
+            SerializedMatrixEntry entry;
+        };
 
-        std::atomic<bool> sourceValuesUpdatedFlag {false};
-        std::unordered_map<SourceID, std::shared_ptr<ModMatrix::SourceValue>> sourceValues;
-        moodycamel::ReaderWriterQueue<std::pair<SourceID, std::shared_ptr<ModMatrix::SourceValue>>> sourceValuesFifo {128};
+        struct SourceChangeCommand {
+            ChangeCommandType type;
+            SourceID id;
+            float value;
+            int voiceIndex;
+            std::string name;
+            bool bipolar;
+        };
 
-        std::atomic<bool> targetValuesUpdatedFlag {false};
-        std::unordered_map<TargetID, std::shared_ptr<ModMatrix::TargetValue>> targetValues;
-        moodycamel::ReaderWriterQueue<std::pair<TargetID, std::shared_ptr<ModMatrix::TargetValue>>> targetValuesFifo {MAX_MOD_TARGETS};
+        struct TargetChangeCommand {
+            ChangeCommandType type;
+            TargetID id;
+            float value;
+            int voiceIndex;
+            std::string name;
+        };
 
-        juce::VBlankAttachment vBlank;
+        moodycamel::ReaderWriterQueue<MatrixChangeCommand> matrixCommands {128};
+        moodycamel::ReaderWriterQueue<SourceChangeCommand> sourceCommands {128};
+        moodycamel::ReaderWriterQueue<TargetChangeCommand> targetCommands {128};
 
-        choc::value::Value& getCachedSourceDefs() {
-            if (sourceDefRefreshReady) {
-                sourceDefRefreshReady = false;
-                cachedSourceDefs = choc::value::createObject("");
-
-                for (const auto& [sourceID, source] : sourceValues) {
-                    cachedSourceDefs.addMember(std::to_string(sourceID), source->getState());
-                }
+        choc::value::Value getSourceDefs() {
+            auto defs = choc::value::createObject("SourceDefs");
+            for (const auto& [sourceID, source] : sourceValues) {
+                defs.addMember(std::to_string(sourceID), source.getState());
             }
-            return cachedSourceDefs;
+            return defs;
         }
 
-        choc::value::Value& getCachedTargetValues() {
-            if (targetDefRefreshReady) {
-                targetDefRefreshReady = false;
-                cachedTargetsValue = choc::value::createObject("");
-
-                for (const auto& [targetID, target] : targetValues) {
-                    const auto v = target->getState();
-                    cachedTargetsValue.addMember(std::to_string(targetID), v);
-                }
+        choc::value::Value getTargetDefs() {
+            auto defs = choc::value::createObject("TargetDefs");
+            for (const auto& [sourceID, source] : sourceValues) {
+                defs.addMember(std::to_string(sourceID), source.getState());
             }
-            return cachedTargetsValue;
+            return defs;
         }
     };
 }

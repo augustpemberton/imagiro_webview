@@ -129,25 +129,24 @@ void imagiro::ParameterAttachment::addBindings() {
             [&](const choc::value::ValueView &args) -> choc::value::Value {
                 return getAllParameterSpecValue();
             });
+    connection.bind(
+            "juce_getPluginParameter",
+            [&](const choc::value::ValueView &args) -> choc::value::Value {
+                auto param = processor.getParameter(args[0].toString());
+                if (!param) return {};
+                return getParameterSpecValue(param);
+            });
 
     connection.bind(
             "juce_getUserValue",
             [&](const choc::value::ValueView &args) -> choc::value::Value {
-                auto param = processor.getParameter(args[0].toString());
+                const auto param = processor.getParameter(args[0].toString());
                 if (!param) return {};
 
-                auto uv = param->getUserValue();
-                if (!param->getConfig()->choices.empty()) uv *= param->getConfig()->choices.size() - 1;
-                return choc::value::Value(uv);
-            });
+                auto v01 = param->getValue();
+                if (args.size() >= 2) v01 = args[1].getWithDefault(0.f);
+                auto uv = param->convertFrom0to1(v01);
 
-    connection.bind(
-            "juce_getModUserValue",
-            [&](const choc::value::ValueView &args) -> choc::value::Value {
-                auto param = processor.getParameter(args[0].toString());
-                if (!param) return {};
-
-                auto uv = param->getModUserValue();
                 if (!param->getConfig()->choices.empty()) uv *= param->getConfig()->choices.size() - 1;
                 return choc::value::Value(uv);
             });
@@ -155,7 +154,7 @@ void imagiro::ParameterAttachment::addBindings() {
     connection.bind(
             "juce_getDisplayValue",
             [&](const choc::value::ValueView &args) -> choc::value::Value {
-                auto param = processor.getParameter(args[0].toString());
+                const auto param = processor.getParameter(args[0].toString());
                 if (!param) return {};
 
                 auto v = param->getValue();
