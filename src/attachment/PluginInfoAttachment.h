@@ -388,6 +388,13 @@ namespace imagiro {
 #endif
                                     return choc::value::Value(productSlug);
                                 });
+
+            connection.bind("juce_getConfigFilePath",
+                                [&](const choc::value::ValueView &args) -> choc::value::Value {
+                                    auto resources = juce::SharedResourcePointer<Resources>();
+
+                                    return choc::value::Value(resources->getConfigFile()->getFile().getFullPathName().toStdString());
+                                });
         }
 
 
