@@ -28,18 +28,25 @@ public:
         browser.getWebUIConnection().removeListener(this);
     }
 
-    void fileOpenerRequested(const juce::String& patternsAllowed) override {
+    void fileOpenerRequested(const juce::String& patternsAllowed, const bool isNewFile) override {
         fileChooser = std::make_unique<juce::FileChooser>(
                 "please choose a file",
                 juce::File::getSpecialLocation(juce::File::userHomeDirectory),
                 patternsAllowed
                 );
 
-        auto folderChooserFlags = juce::FileBrowserComponent::openMode
-                                  | juce::FileBrowserComponent::canSelectFiles
-                                  | juce::FileBrowserComponent::canSelectMultipleItems;
+        juce::FileBrowserComponent::FileChooserFlags fileChooserFlags;
+        if (isNewFile) {
+                fileChooserFlags = juce::FileBrowserComponent::saveMode;
+        } else {
+            fileChooserFlags = static_cast<juce::FileBrowserComponent::FileChooserFlags>(
+                juce::FileBrowserComponent::openMode
+                | juce::FileBrowserComponent::canSelectFiles
+                | juce::FileBrowserComponent::canSelectMultipleItems);
 
-        fileChooser->launchAsync (folderChooserFlags, [this] (const juce::FileChooser& chooser) {
+        }
+
+        fileChooser->launchAsync (fileChooserFlags, [this] (const juce::FileChooser& chooser) {
             auto results = chooser.getResults();
             if (results.isEmpty()) return;
             auto resultsView = choc::value::createEmptyArray();

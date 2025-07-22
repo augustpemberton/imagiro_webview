@@ -165,8 +165,8 @@ namespace imagiro {
         };
     }
 
-    void WebUIConnection::requestFileChooser(juce::String patternsAllowed) {
-        listeners.call(&Listener::fileOpenerRequested, patternsAllowed);
+    void WebUIConnection::requestFileChooser(juce::String patternsAllowed, bool newFile) {
+        listeners.call(&Listener::fileOpenerRequested, patternsAllowed, newFile);
     }
 
     void WebUIConnection::removeWebView(choc::ui::WebView* v) {
