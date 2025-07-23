@@ -26,8 +26,10 @@ namespace imagiro {
             connection.bind("juce_requestFileChooser",
                 [&](const choc::value::ValueView& args) -> choc::value::Value {
                     bool newFile = false;
+                    juce::File openTo;
                     if (args.size() > 1) newFile = args[1].getWithDefault(false);
-                    connection.requestFileChooser(args[0].toString(), newFile);
+                    if (args.size() > 2) openTo = juce::File(args[2].toString());
+                    connection.requestFileChooser(args[0].toString(), newFile, openTo);
                     return {};
                 });
         }

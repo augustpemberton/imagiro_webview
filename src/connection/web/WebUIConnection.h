@@ -13,7 +13,7 @@ namespace imagiro {
     class WebUIConnection : public UIConnection, juce::Timer {
     public:
         struct Listener {
-            virtual void fileOpenerRequested(const juce::String& patternsAllowed, bool newFile) {}
+            virtual void fileOpenerRequested(const juce::String& patternsAllowed, bool newFile, juce::File openTo) {}
         };
 
         void addListener(Listener* l);
@@ -30,7 +30,7 @@ namespace imagiro {
         void evalFunction(const std::string &functionName, const std::vector<choc::value::Value> &args = {}) override;
         void bindFunction(const std::string &functionName, CallbackFn&& callback) override;
 
-        void requestFileChooser(juce::String patternsAllowed = "*.wav", bool isNewFile = false);
+        void requestFileChooser(juce::String patternsAllowed = "*.wav", bool isNewFile = false, juce::File openTo = juce::File());
 
         void navigate(const std::string &url);
         void setHTML(const std::string &html);

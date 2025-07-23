@@ -28,10 +28,10 @@ public:
         browser.getWebUIConnection().removeListener(this);
     }
 
-    void fileOpenerRequested(const juce::String& patternsAllowed, const bool isNewFile) override {
+    void fileOpenerRequested(const juce::String& patternsAllowed, const bool isNewFile, juce::File openTo) override {
         fileChooser = std::make_unique<juce::FileChooser>(
                 "please choose a file",
-                juce::File::getSpecialLocation(juce::File::userHomeDirectory),
+                openTo.exists() ? openTo : juce::File::getSpecialLocation(juce::File::userHomeDirectory),
                 patternsAllowed
                 );
 
