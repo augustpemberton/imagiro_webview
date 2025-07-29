@@ -31,6 +31,7 @@ namespace imagiro {
                     connection.getSettings().depth,
                     connection.getSettings().attackMS,
                     connection.getSettings().releaseMS,
+                    connection.getSettings().bipolar
                 }
             });
         }
@@ -45,6 +46,7 @@ namespace imagiro {
                     connection.getSettings().depth,
                     connection.getSettings().attackMS,
                     connection.getSettings().releaseMS,
+                    connection.getSettings().bipolar
                 }
             });
         }
@@ -67,7 +69,7 @@ namespace imagiro {
         void OnSourceValueUpdated(const SourceID& sourceID, const int voiceIndex) override {
             const auto source = modMatrix.getSourceValues()[sourceID];
             sourceCommands.try_enqueue({
-                ChangeCommandType::Added,
+                ChangeCommandType::Updated,
                 sourceID,
                 voiceIndex < 0 ? source->value.getGlobalValue() : source->value.getVoiceValue(voiceIndex),
                 voiceIndex,
@@ -107,11 +109,12 @@ namespace imagiro {
                 auto sourceID = args[0].getWithDefault(0);
                 auto targetID = args[1].getWithDefault(0);
                 auto depth = args[2].getWithDefault(0.f);
+                auto bipolar = args[3].getWithDefault(false);
 
                 auto attackMS = args.size() > 3 ? args[3].getWithDefault(0.f) : 0.f;
                 auto releaseMS = args.size() > 4 ? args[4].getWithDefault(0.f) : 0.f;
 
-                modMatrix.queueConnection(sourceID, targetID, {depth, attackMS, releaseMS});
+                modMatrix.queueConnection(sourceID, targetID, {depth, bipolar, attackMS, releaseMS});
 
                 return {};
             });
@@ -172,9 +175,8 @@ namespace imagiro {
 
         void processSourceCommands() {
             SourceChangeCommand command {};
-            bool updated = false;
+            std::set<SourceID> updatedSources;
             while (sourceCommands.try_dequeue(command)) {
-                updated = true;
                 if (command.type == ChangeCommandType::Added) {
                     sourceValues.insert({ command.id, { command.name, command.bipolar } });
                 } else if (command.type == ChangeCommandType::Updated) {
@@ -186,26 +188,31 @@ namespace imagiro {
                         sourceValues[command.id].value.setVoiceValue(command.value, command.voiceIndex);
                     }
 
-                    auto mostRecentVoiceValue = sourceValues[command.id].value.getGlobalValue() +
-                        sourceValues[command.id].value.getVoiceValue(mostRecentVoice);
 
-                    connection.eval("window.ui.sourceValueUpdated", {
-                        choc::value::Value(command.id),
-                        choc::value::Value(static_cast<int>(mostRecentVoice)),
-                        choc::value::Value(mostRecentVoiceValue)
-                    });
+                    updatedSources.insert(command.id);
 
                 } else if (command.type == ChangeCommandType::Removed) {
                     sourceValues.erase(command.id);
                 }
             }
 
-            if (updated) {
+            for (const auto id : updatedSources) {
+                const auto mostRecentVoiceValue = sourceValues[id].value.getGlobalValue() +
+                    sourceValues[id].value.getVoiceValue(mostRecentVoice);
+                const auto bipolar = sourceValues[id].bipolar;
+
+                connection.eval("window.ui.sourceValueUpdated", {
+                    choc::value::Value(id),
+                    choc::value::Value(bipolar),
+                    choc::value::Value(static_cast<int>(mostRecentVoice)),
+                    choc::value::Value(mostRecentVoiceValue)
+                });
             }
         }
 
         void processTargetCommands() {
             TargetChangeCommand command {};
+            std::set<TargetID> updatedTargets;
             while (targetCommands.try_dequeue(command)) {
                 if (command.type == ChangeCommandType::Added) {
                     targetValues.insert({command.id, {}});
@@ -216,28 +223,25 @@ namespace imagiro {
                     } else {
                         targetValues[command.id].value.setVoiceValue(command.value, command.voiceIndex);
                     }
-
-                    auto mostRecentVoiceValue = targetValues[command.id].value.getGlobalValue() +
-                        targetValues[command.id].value.getVoiceValue(mostRecentVoice);
-
-                    connection.eval("window.ui.targetValueUpdated", {
-                        choc::value::Value(command.id),
-                        choc::value::Value(static_cast<int>(mostRecentVoice)),
-                        choc::value::Value(mostRecentVoiceValue)
-                    });
+                    updatedTargets.insert(command.id);
                 } else if (command.type == ChangeCommandType::Reset) {
                     jassert(targetValues.contains(command.id));
                     targetValues[command.id].value.resetValue();
-
-                    connection.eval("window.ui.targetValueUpdated", {
-                        choc::value::Value(command.id),
-                        choc::value::Value(static_cast<int>(mostRecentVoice)),
-                        choc::value::Value(0)
-                    });
-
+                    updatedTargets.insert(command.id);
                 } else if (command.type == ChangeCommandType::Removed) {
                     targetValues.erase(command.id);
                 }
+            }
+
+            for (const auto id : updatedTargets) {
+                const auto mostRecentVoiceValue = targetValues[id].value.getGlobalValue() +
+                    targetValues[id].value.getVoiceValue(mostRecentVoice);
+
+                connection.eval("window.ui.targetValueUpdated", {
+                    choc::value::Value(id),
+                    choc::value::Value(static_cast<int>(mostRecentVoice)),
+                    choc::value::Value(mostRecentVoiceValue)
+                });
             }
         }
 
