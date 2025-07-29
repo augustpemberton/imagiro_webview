@@ -36,7 +36,7 @@ namespace imagiro {
                 auto relPath = juce::String(std::string (path)).replace("/$RES/", "");
 
 #if JUCE_DEBUG && defined(SRCPATH)
-                auto file = juce::File(juce::String(SRCPATH) + "/../resources/system")
+                auto file = juce::File(juce::String(SRCPATH) + "/../resources/system/resources")
                         .getChildFile(relPath);
 #else
                 auto file = Resources::getSystemDataFolder().getChildFile("resources")
