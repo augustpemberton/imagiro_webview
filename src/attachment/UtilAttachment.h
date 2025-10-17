@@ -97,7 +97,7 @@ namespace imagiro {
 
                         std::string valString;
 
-                        auto& configFile = Resources::getInstance()->getConfigFile();
+                        auto& configFile = resources->getConfigFile();
                         if (args[1].isFloat32()) {
                             configFile->setValue(juce::String(key), args[1].getFloat32());
                         } else if (args[1].isFloat64()) {
@@ -124,7 +124,7 @@ namespace imagiro {
                     "juce_loadFromConfig",
                     [&](const choc::value::ValueView &args) -> choc::value::Value {
                         auto key = juce::String(args[0].toString());
-                        auto& configFile = Resources::getInstance()->getConfigFile();
+                        auto& configFile = resources->getConfigFile();
                         if (!configFile->containsKey(key)) return {};
 
                         auto val = configFile->getValue(key);
@@ -199,5 +199,6 @@ namespace imagiro {
     private:
         Processor& processor;
         BackgroundTaskRunner backgroundTaskRunner;
+        juce::SharedResourcePointer<Resources> resources;
     };
 }

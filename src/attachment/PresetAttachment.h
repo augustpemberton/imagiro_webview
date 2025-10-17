@@ -248,7 +248,7 @@ class PresetAttachment : public UIAttachment, public Processor::PresetListener, 
                         auto file = juce::File(path);
                         if (!file.exists()) return choc::value::Value {""};
 
-                        auto relpath = file.getRelativePathFrom(Resources::getInstance()->getPresetsFolder()).toStdString();
+                        auto relpath = file.getRelativePathFrom(resources->getPresetsFolder()).toStdString();
                         return choc::value::Value {relpath};
                     });
 
