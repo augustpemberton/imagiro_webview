@@ -62,6 +62,14 @@ namespace imagiro {
                     }
             );
 
+            connection.bind(
+                    "juce_getPluginHostType",
+                    [&](const choc::value::ValueView &args) -> choc::value::Value {
+                        juce::PluginHostType hostType;
+                        return choc::value::Value(hostType.getHostDescription());
+                    }
+            );
+
             connection.bind("juce_getIsDebug",
                                 [&](const choc::value::ValueView &args) -> choc::value::Value {
 #if JUCE_DEBUG
