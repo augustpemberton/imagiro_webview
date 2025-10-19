@@ -67,9 +67,10 @@ public:
         auto b = getLocalBounds();
         browser.setBounds(b);
 
-        resources->getConfigFile()->setValue("defaultWidth", b.getWidth());
-        resources->getConfigFile()->setValue("defaultHeight", b.getHeight());
-        resources->getConfigFile()->save();
+        const auto& configFile = resources->getConfigFile();
+        configFile->setValue("defaultWidth", b.getWidth());
+        configFile->setValue("defaultHeight", b.getHeight());
+        configFile->save();
     }
 
     void paint(juce::Graphics &g) override {
