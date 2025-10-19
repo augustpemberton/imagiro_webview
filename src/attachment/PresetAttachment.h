@@ -225,9 +225,11 @@ class PresetAttachment : public UIAttachment, public Processor::PresetListener, 
                         if (!preset) return {};
 
                         auto presetString = choc::json::toString(preset.value().getUIState());
-                        resources->getConfigFile()->setValue("defaultPresetPath", presetFile.getFullPathName());
-                        resources->getConfigFile()->setValue("defaultPresetState", juce::String(presetString));
-                        resources->getConfigFile()->save();
+
+                        const auto& configFile = resources->getConfigFile();
+                        configFile->setValue("defaultPresetPath", presetFile.getFullPathName());
+                        configFile->setValue("defaultPresetState", juce::String(presetString));
+                        configFile->save();
 
                         return {};
                     });
@@ -235,9 +237,10 @@ class PresetAttachment : public UIAttachment, public Processor::PresetListener, 
             connection.bind(
                     "juce_clearDefaultPreset",
                     [&](const choc::value::ValueView &args) -> choc::value::Value {
-                        resources->getConfigFile()->removeValue("defaultPresetPath");
-                        resources->getConfigFile()->removeValue("defaultPresetState");
-                        resources->getConfigFile()->save();
+                        const auto& configFile = resources->getConfigFile();
+                        configFile->removeValue("defaultPresetPath");
+                        configFile->removeValue("defaultPresetState");
+                        configFile->save();
                         return {};
                     });
 
