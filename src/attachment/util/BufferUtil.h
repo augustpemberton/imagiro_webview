@@ -7,6 +7,8 @@
 #include <choc/audio/choc_SampleBufferUtilities.h>
 #include <juce_core/juce_core.h>
 
+#include "juce_audio_basics/juce_audio_basics.h"
+
 static choc::buffer::ChannelArrayView<float> getWriteViewForJuceBuffer(juce::AudioSampleBuffer& b) {
     return choc::buffer::createChannelArrayView(b.getArrayOfWritePointers(),
                                                 b.getNumChannels(),

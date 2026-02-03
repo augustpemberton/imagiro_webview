@@ -5,27 +5,41 @@
 #pragma once
 #include "UIAttachment.h"
 #include "choc/text/choc_JSON.h"
-#include "imagiro_processor/imagiro_processor.h"
-#include "imagiro_util/src/BackgroundTaskRunner.h"
+#include "imagiro_util/BackgroundTaskRunner.h"
+#include "imagiro_util/miniz/compress_string.h"
+#include <unordered_map>
+#include <unordered_set>
+#include <string_view>
 
 namespace imagiro {
-    class UtilAttachment : public UIAttachment, ValueData::Listener, BackgroundTaskRunner::Listener {
+    class UtilAttachment : public UIAttachment, BackgroundTaskRunner::Listener {
     public:
         UtilAttachment(UIConnection& c, Processor& p)
                 : UIAttachment(c), processor(p) {
             backgroundTaskRunner.addListener(this);
-            processor.getValueData().addListener(this);
         }
 
         ~UtilAttachment() override {
             backgroundTaskRunner.removeListener(this);
-            processor.getValueData().removeListener(this);
         }
 
-        void OnValueDataUpdated(ValueData& data, const std::string &key, const choc::value::ValueView &newValue) override {
-            connection.eval("window.ui.processorValueUpdated", {
-                choc::value::Value{key},
-                choc::value::Value{newValue}
+        // Serialize processor data that should be saved in presets
+        choc::value::Value getProcessorDataForPreset() const {
+            auto obj = choc::value::createObject({});
+            for (const auto& key : presetKeys_) {
+                if (auto it = processorData_.find(key); it != processorData_.end()) {
+                    obj.addMember(key, it->second);
+                }
+            }
+            return obj;
+        }
+
+        // Restore processor data from preset
+        void loadProcessorDataFromPreset(const choc::value::ValueView& data) {
+            if (!data.isObject()) return;
+            data.visitObjectMembers([this](std::string_view key, const choc::value::ValueView& value) {
+                processorData_[std::string(key)] = choc::value::Value(value);
+                presetKeys_.insert(std::string(key));
             });
         }
 
@@ -70,24 +84,31 @@ namespace imagiro {
 
             connection.bind(
                     "juce_saveInProcessor", [&](const choc::value::ValueView &args) -> choc::value::Value {
-                        const auto key = std::string(args[0].getWithDefault(""));
-                        if (key.empty()) return {};
-                        const auto value = args[1];
-                        const auto saveInPreset = args[2].getWithDefault(false);
+                        auto key = std::string(args[0].toString());
+                        auto value = choc::value::Value(args[1]);
 
-                        processor.getValueData().set(key, value, saveInPreset);
+                        // Optional third argument: save in preset (default false)
+                        bool saveInPreset = args.size() > 2 && args[2].getWithDefault(false);
+
+                        processorData_[key] = value;
+                        if (saveInPreset) {
+                            presetKeys_.insert(key);
+                        } else {
+                            presetKeys_.erase(key);
+                        }
 
                         return {};
                     });
 
             connection.bind(
                     "juce_loadFromProcessor", [&](const choc::value::ValueView &args) -> choc::value::Value {
-                        const auto key = std::string(args[0].getWithDefault(""));
-                        if (key.empty()) return {};
+                        auto key = std::string(args[0].toString());
 
-                        auto val = processor.getValueData().get(key);
-                        if (!val) return {};
-                        return *val;
+                        if (auto it = processorData_.find(key); it != processorData_.end()) {
+                            return choc::value::Value(it->second);
+                        }
+
+                        return {};
                     });
 
             connection.bind(
@@ -157,12 +178,12 @@ namespace imagiro {
             );
 
             connection.bind("juce_setDefaultBPM", [&](const choc::value::ValueView& args) -> choc::value::Value {
-                const auto defaultBPM = args[0].getWithDefault(120);
-                processor.setDefaultBPM(defaultBPM);
+                double bpm = args[0].getWithDefault(120.0);
+                processor.transport().setDefaultBpm(bpm);
                 return {};
             });
             connection.bind("juce_getDefaultBPM", [&](const choc::value::ValueView&) -> choc::value::Value {
-                return choc::value::Value(processor.getDefaultBPM());
+                return choc::value::Value(processor.transport().defaultBpm());
             });
 
             connection.bind("juce_emitSignal", [&](const choc::value::ValueView& args) -> choc::value::Value {
@@ -200,5 +221,9 @@ namespace imagiro {
         Processor& processor;
         BackgroundTaskRunner backgroundTaskRunner;
         juce::SharedResourcePointer<Resources> resources;
+
+        // Storage for arbitrary UI data
+        std::unordered_map<std::string, choc::value::Value> processorData_;
+        std::unordered_set<std::string> presetKeys_;  // Keys that should be saved in preset
     };
 }

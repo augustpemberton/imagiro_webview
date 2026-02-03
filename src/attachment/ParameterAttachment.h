@@ -3,29 +3,26 @@
 //
 
 #pragma once
-#include<imagiro_processor/imagiro_processor.h>
+#include <imagiro_processor/processor/Processor.h>
+#include <imagiro_processor/parameter/ParamController.h>
+#include <sigslot/sigslot.h>
 #include "UIAttachment.h"
-#include "imagiro_processor/src/Processor.h"
 
 namespace imagiro {
-    class ParameterAttachment : public UIAttachment, public Parameter::Listener, Processor::ParameterListener {
+    class ParameterAttachment : public UIAttachment {
     public:
         ParameterAttachment(UIConnection& connection, Processor& p);
-        ~ParameterAttachment() override;
+        ~ParameterAttachment() override = default;
 
         void addListeners() override;
         void addBindings() override;
 
-        void onParameterAdded(Parameter &p) override;
-
-        void parameterChanged(Parameter *param) override;
-        void configChanged(imagiro::Parameter *param) override;
-
     private:
         Processor& processor;
-        void sendStateToBrowser(Parameter* param);
-        choc::value::Value getAllParameterSpecValue();
+        std::vector<sigslot::scoped_connection> paramConnections_;
 
-        static choc::value::Value getParameterSpecValue(Parameter* param);
+        void sendStateToBrowser(Handle h);
+        choc::value::Value getAllParameterSpecValue();
+        choc::value::Value getParameterSpecValue(Handle h);
     };
 } // namespace imagiro

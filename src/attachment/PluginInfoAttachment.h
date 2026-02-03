@@ -4,7 +4,7 @@
 
 #pragma once
 #include <timestamp.h>
-#include <imagiro_processor/imagiro_processor.h>
+#include <imagiro_processor/processor/Processor.h>
 #include "UIAttachment.h"
 
 #include "juce_audio_devices/juce_audio_devices.h"
@@ -109,12 +109,12 @@ namespace imagiro {
                                 }
             );
 
-            connection.bind(
-                    "juce_getCpuLoad",
-                    [&](const choc::value::ValueView &args) -> choc::value::Value {
-                        return choc::value::Value(processor.getCpuLoad());
-                    }
-            );
+            // connection.bind(
+            //         "juce_getCpuLoad",
+            //         [&](const choc::value::ValueView &args) -> choc::value::Value {
+            //             return choc::value::Value(processor.getCpuLoad());
+            //         }
+            // );
 
             connection.bind(
                     "juce_getUUID",

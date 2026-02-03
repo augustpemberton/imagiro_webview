@@ -1,6 +1,7 @@
 #pragma once
 
 #include "src/attachment/AuthAttachment.h"
+#include "src/attachment/PresetAttachment.h"
 #include "src/attachment/util/BufferUtil.h"
 #include "src/AssetServer/BinaryDataAssetServer.h"
 #include "src/connection/web/WebProcessor.h"

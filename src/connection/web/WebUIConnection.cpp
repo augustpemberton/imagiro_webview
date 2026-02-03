@@ -135,7 +135,7 @@ namespace imagiro {
     void WebUIConnection::timerCallback() {
         std::string js;
         while (jsEvalQueue.try_dequeue(js)) {
-            auto evalString = "window.ui.evaluate(" + js + ");";
+            auto evalString = "if (window.ui && window.ui.evaluate) { window.ui.evaluate(" + js + "); }";
             for (auto wv: activeWebViews) wv->evaluateJavascript(evalString);
         }
     }

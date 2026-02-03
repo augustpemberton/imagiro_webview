@@ -6,13 +6,16 @@
 #include "imagiro_webview/src/attachment/WebUIAttachment.h"
 
 namespace imagiro {
-    WebProcessor::WebProcessor(AssetServer &server, const juce::String &parametersYAMLString,
-                               const ParameterLoader &loader,
+    WebProcessor::WebProcessor(AssetServer &server,
                                const juce::AudioProcessor::BusesProperties &layout)
-        : ConnectedProcessor(std::make_unique<WebUIConnection>(server), parametersYAMLString, loader, layout),
+        : ConnectedProcessor(std::make_unique<WebUIConnection>(server), layout),
           devicesAttachment(getWebUIConnection())
-    //              backgroundTaskRunner()
     {
+    }
+
+    void WebProcessor::initializeWebAttachments() {
+        initializeAttachments();  // Initialize base attachments
+
         webUIAttachment = std::make_unique<WebUIAttachment>(getWebUIConnection(), *this);
         addUIAttachment(*webUIAttachment);
         addUIAttachment(devicesAttachment);
@@ -34,7 +37,7 @@ namespace imagiro {
 
         auto size = defaultSize;
 
-        auto &configFile = resources->getConfigFile();
+        auto &configFile = juce::SharedResourcePointer<Resources>()->getConfigFile();
         if (configFile->containsKey("defaultWidth")) size.x = configFile->getIntValue("defaultWidth");
         if (configFile->containsKey("defaultHeight")) size.y = configFile->getIntValue("defaultHeight");
 

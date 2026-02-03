@@ -4,7 +4,6 @@
 
 #pragma once
 #include <timestamp.h>
-#include <imagiro_processor/imagiro_processor.h>
 #include "UIAttachment.h"
 
 #include "juce_audio_devices/juce_audio_devices.h"

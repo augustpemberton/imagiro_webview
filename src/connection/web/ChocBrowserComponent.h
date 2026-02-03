@@ -44,7 +44,7 @@ namespace imagiro {
 
             setOpaque(false);
             setAlpha(0.01f);
-            webView->evaluateJavascript("window.ui.onUIOpened();");
+            webView->evaluateJavascript("if (window.ui && window.ui.onUIOpened) { window.ui.onUIOpened(); }");
         }
 
         ~ChocBrowserComponent() override {

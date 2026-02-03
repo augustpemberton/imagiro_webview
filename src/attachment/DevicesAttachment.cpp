@@ -2,8 +2,8 @@
 // Created by August Pemberton on 04/04/2025.
 //
 #include "DevicesAttachment.h"
-
-#include <juce_audio_plugin_client/juce_audio_plugin_client.h>
+#include "juce_audio_plugin_client/juce_audio_plugin_client.h"
+#include "juce_audio_utils/juce_audio_utils.h"
 #include "juce_audio_plugin_client/Standalone/juce_StandaloneFilterWindow.h"
 
 namespace imagiro {

@@ -7,7 +7,7 @@
 // #include "choc/gui/choc_WebView.h"
 #include <utility>
 #include "AssetServer.h"
-#include <imagiro_processor/imagiro_processor.h>
+#include <imagiro_processor/config/Resources.h>
 
 // using choc::ui::WebView;
 using GetResourceFn = std::function<const char*(const char*, int&)>;

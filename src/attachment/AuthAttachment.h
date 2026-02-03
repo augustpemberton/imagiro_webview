@@ -4,7 +4,7 @@
 
 #pragma once
 #include "UIAttachment.h"
-#include <imagiro_processor/imagiro_processor.h>
+#include "imagiro_processor/config/AuthorizationManager.h"
 
 namespace imagiro {
     class AuthAttachment : public UIAttachment, AuthorizationManager::Listener {

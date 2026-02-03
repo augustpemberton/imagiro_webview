@@ -6,8 +6,8 @@
 
 #include <utility>
 
+#include <imagiro_processor/processor/Processor.h>
 #include "imagiro_webview/src/attachment/ParameterAttachment.h"
-#include "imagiro_webview/src/attachment/PresetAttachment.h"
 #include "imagiro_webview/src/attachment/PluginInfoAttachment.h"
 #include "imagiro_webview/src/attachment/FileIOAttachment.h"
 #include "imagiro_webview/src/attachment/UtilAttachment.h"
@@ -15,13 +15,22 @@
 namespace imagiro {
     class ConnectedProcessor : public Processor {
     public:
-        ConnectedProcessor(std::unique_ptr<UIConnection> c, juce::String parametersYAMLString, const ParameterLoader& loader = ParameterLoader(),
+        ConnectedProcessor(std::unique_ptr<UIConnection> c,
                            const juce::AudioProcessor::BusesProperties& layout = getDefaultProperties())
-                : Processor(std::move(parametersYAMLString), loader, layout),
-                  uiConnection(std::move(c))
+                : Processor(layout),
+                  uiConnection(std::move(c)),
+                  parameterAttachment(*uiConnection, *this),
+                  pluginInfoAttachment(*uiConnection, *this),
+                  fileIOAttachment(*uiConnection),
+                  utilAttachment(*uiConnection, *this)
         {
+        }
+
+        // Call this after parameters are added to set up attachments
+        void initializeAttachments() {
+            initParameters();  // Initialize JUCE parameter adapter
+
             addUIAttachment(parameterAttachment);
-            addUIAttachment(presetAttachment);
             addUIAttachment(pluginInfoAttachment);
             addUIAttachment(fileIOAttachment);
             addUIAttachment(utilAttachment);
@@ -33,24 +42,20 @@ namespace imagiro {
             attachments.push_back(&attachment);
         }
 
-        void processBlock(juce::AudioBuffer<float> &buffer, juce::MidiBuffer &midiMessages) override {
-            Processor::processBlock(buffer, midiMessages);
-
+        void afterProcess() override {
             for (auto attachment : attachments) {
                 attachment->processCallback();
             }
         }
 
-
     protected:
         std::unique_ptr<UIConnection> uiConnection;
+        UtilAttachment utilAttachment;
+        ParameterAttachment parameterAttachment;
+        PluginInfoAttachment pluginInfoAttachment;
+        FileIOAttachment fileIOAttachment;
 
     private:
-        ParameterAttachment parameterAttachment {*uiConnection, *this};
-        PresetAttachment presetAttachment {*uiConnection, *this};
-        PluginInfoAttachment pluginInfoAttachment {*uiConnection, *this};
-        FileIOAttachment fileIOAttachment {*uiConnection};
-        UtilAttachment utilAttachment {*uiConnection, *this};
 
         std::vector<UIAttachment*> attachments;
     };

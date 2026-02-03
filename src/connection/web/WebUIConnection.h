@@ -2,10 +2,9 @@
 
 #include <choc/gui/choc_WebView.h>
 #include <juce_core/juce_core.h>
-#include <juce_audio_processors/juce_audio_processors.h>
 #include "imagiro_webview/src/AssetServer/BinaryDataAssetServer.h"
-#include <imagiro_util/imagiro_util.h>
 #include "../UIConnection.h"
+#include <imagiro_processor/config/Resources.h>
 
 namespace imagiro {
     class WebUIPluginEditor;
