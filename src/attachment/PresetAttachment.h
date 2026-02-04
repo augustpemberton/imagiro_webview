@@ -26,9 +26,7 @@ public:
     }
 
     void folderChanged(const juce::File) override {
-        std::lock_guard g (fileActionMutex);
-        reloadPresets();
-        connection.eval("window.ui.reloadPresets");
+        reloadAndNotify();
     }
 
     void addBindings() override {
@@ -86,8 +84,7 @@ public:
                     lastLoadedPreset = preset;
                     lastLoadedPresetPath = presetFile.getRelativePathFrom(resources->getPresetsFolder()).toStdString();
 
-                    reloadPresets();
-                    connection.eval("window.ui.reloadPresets");
+                    reloadAndNotify();
                     connection.eval("window.ui.presetChanged");
                     return {};
                 }
@@ -123,6 +120,41 @@ public:
                         lastLoadedPresetPath = "";
                         connection.eval("window.ui.presetChanged");
                     }
+                    return {};
+                }
+        );
+
+        connection.bind(
+                "juce_savePresetFromJSON",
+                [&](const choc::value::ValueView &args) -> choc::value::Value {
+                    auto category = std::string(args[0].toString());
+                    auto presetJsonValue = args[1];
+
+                    // Convert choc value to JSON string and parse
+                    auto jsonString = std::string(choc::json::toString(presetJsonValue));
+                    auto j = nlohmann::json::parse(jsonString);
+
+                    // Parse preset from JSON
+                    auto preset = Preset::fromJson(j);
+                    if (!preset) {
+                        throw std::runtime_error("Failed to parse preset JSON");
+                    }
+
+                    // Create category folder if needed
+                    auto categoryFolder = resources->getPresetsFolder().getChildFile(category);
+                    if (!categoryFolder.exists()) {
+                        if (!categoryFolder.createDirectory()) {
+                            throw std::runtime_error("Failed to create category folder: " + category);
+                        }
+                    }
+
+                    // Save preset to file
+                    auto presetFile = categoryFolder.getChildFile(preset->metadata().name + ".json");
+                    if (!preset->saveToFile(presetFile.getFullPathName().toStdString())) {
+                        throw std::runtime_error("Failed to save preset file: " + preset->metadata().name);
+                    }
+
+                    reloadAndNotify();
                     return {};
                 }
         );
@@ -337,19 +369,66 @@ private:
         return favoriteSet;
     }
 
+    void reloadAndNotify() {
+        reloadPresets();
+        connection.eval("window.ui.reloadPresets");
+    }
+
     void reloadPresets() {
-        std::lock_guard g(fileActionMutex);
+        std::scoped_lock lock(fileActionMutex);
         presetsCache.clear();
 
         auto presetsFolder = resources->getPresetsFolder();
         auto favorites = getFavorites();
 
         // Scan for preset files (both legacy .impreset and new .json)
-        juce::Array<juce::File> presetFiles;
-        presetsFolder.findChildFiles(presetFiles, juce::File::findFiles, true, "*.impreset");
-        presetsFolder.findChildFiles(presetFiles, juce::File::findFiles, true, "*.json");
+        juce::Array<juce::File> impresetFiles;
+        juce::Array<juce::File> jsonFiles;
+        presetsFolder.findChildFiles(impresetFiles, juce::File::findFiles, true, "*.impreset");
+        presetsFolder.findChildFiles(jsonFiles, juce::File::findFiles, true, "*.json");
 
-        for (const auto& file : presetFiles) {
+        // Build map of json preset names (from metadata) for deduplication
+        // Key: category + "/" + preset.metadata.name
+        std::map<std::string, juce::File> jsonPresetsByName;
+        for (const auto& file : jsonFiles) {
+            auto parentFolder = file.getParentDirectory();
+            auto category = parentFolder == presetsFolder
+                ? "Default"
+                : parentFolder.getFileName().toStdString();
+
+            auto preset = Preset::loadFromFile(file.getFullPathName().toStdString());
+            if (!preset) continue;
+
+            auto presetKey = category + "/" + preset->metadata().name;
+            jsonPresetsByName[presetKey] = file;
+        }
+
+        // Process .impreset files, but skip if .json version with same preset name exists
+        for (const auto& file : impresetFiles) {
+            auto parentFolder = file.getParentDirectory();
+            auto category = parentFolder == presetsFolder
+                ? "Default"
+                : parentFolder.getFileName().toStdString();
+
+            auto preset = Preset::loadFromFile(file.getFullPathName().toStdString());
+            if (!preset) continue;
+
+            auto presetKey = category + "/" + preset->metadata().name;
+
+            // If a .json version with same metadata name exists, delete the old .impreset and skip
+            if (jsonPresetsByName.count(presetKey) > 0) {
+                file.deleteFile();
+                continue;
+            }
+
+            auto relpath = file.getRelativePathFrom(presetsFolder).toStdString();
+            auto uiState = presetToUIState(*preset, relpath);
+            uiState.setMember("favorite", choc::value::Value(favorites.count(relpath) > 0));
+            presetsCache[category].push_back(uiState);
+        }
+
+        // Process all .json files
+        for (const auto& file : jsonFiles) {
             auto relpath = file.getRelativePathFrom(presetsFolder).toStdString();
             auto parentFolder = file.getParentDirectory();
             auto category = parentFolder == presetsFolder
@@ -360,9 +439,7 @@ private:
             if (!preset) continue;
 
             auto uiState = presetToUIState(*preset, relpath);
-            // Update favorite status
             uiState.setMember("favorite", choc::value::Value(favorites.count(relpath) > 0));
-
             presetsCache[category].push_back(uiState);
         }
     }
