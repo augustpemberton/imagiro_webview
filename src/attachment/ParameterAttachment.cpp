@@ -201,6 +201,18 @@ void ParameterAttachment::addBindings() {
             processor.juceAdapter()->setValueAsUserAction(h, *parsed);
             return {};
         });
+
+    connection.bind(
+        "juce_setPluginParameterLocked",
+        [&](const choc::value::ValueView &args) -> choc::value::Value {
+            auto paramID = args[0].getWithDefault("");
+            auto locked = args[1].getWithDefault(false);
+
+            if (!processor.params().has(paramID)) return {};
+            auto h = processor.params().handle(paramID);
+            processor.params().setLocked(h, locked);
+            return {};
+        });
 }
 
 void ParameterAttachment::sendStateToBrowser(Handle h) {
@@ -226,6 +238,7 @@ choc::value::Value ParameterAttachment::getParameterSpecValue(Handle h) {
     paramSpec.setMember("name", config.name);
     paramSpec.setMember("value01", processor.params().getValue01UI(h));
     paramSpec.setMember("defaultVal01", config.range.normalize(config.defaultValue));
+    paramSpec.setMember("locked", processor.params().isLocked(h));
 
     return paramSpec;
 }
