@@ -34,6 +34,12 @@ namespace imagiro {
             return obj;
         }
 
+        std::optional<choc::value::Value> get(const std::string& key) const {
+            if (auto it = processorData_.find(key); it != processorData_.end())
+                return it->second;
+            return std::nullopt;
+        }
+
         // Restore processor data from preset
         void loadProcessorDataFromPreset(const choc::value::ValueView& data) {
             if (!data.isObject()) return;
@@ -43,10 +49,10 @@ namespace imagiro {
             });
         }
 
-        void OnTaskFinished(int taskID, const choc::value::ValueView &result) override {
+        void OnTaskFinished(int taskID, const nlohmann::json &result) override {
             connection.eval("window.ui.onBackgroundTaskFinished", {
                 choc::value::Value{taskID},
-                choc::value::Value{result}
+                choc::value::Value{result.dump()}
             });
         }
 
@@ -208,8 +214,9 @@ namespace imagiro {
                 const auto underlyingFn = connection.getBoundFunctions().at(fnName);
 
                 const auto jobID = backgroundTaskRunner.queueTask({
-                    [underlyingFn, fnArgs] {
-                        return underlyingFn(fnArgs);
+                    [underlyingFn, fnArgs]() -> nlohmann::json {
+                        auto chocResult = underlyingFn(fnArgs);
+                        return nlohmann::json::parse(choc::json::toString(chocResult));
                     }
                 });
 
