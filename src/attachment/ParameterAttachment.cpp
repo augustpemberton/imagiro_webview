@@ -32,7 +32,7 @@ void ParameterAttachment::addBindings() {
             auto h = processor.params().handle(paramID);
             const auto& config = processor.params().config(h);
 
-            auto v = processor.params().getValueUI(h);
+            auto v = processor.params().getValue(h);
             if (v >= config.range.max_ && loop) {
                 v = config.range.min_;
             } else {
@@ -49,7 +49,7 @@ void ParameterAttachment::addBindings() {
                     interval = config.range.length() * 0.01f;
                 }
 
-                auto currentVal01 = processor.params().getValue01UI(h);
+                auto currentVal01 = processor.params().getValue01(h);
                 auto minIncrementPercent = 0.01;
                 auto minVal01 = currentVal01 + (positive ? minIncrementPercent : -minIncrementPercent);
                 minVal01 = std::clamp((float)minVal01, 0.f, 1.f);
@@ -60,7 +60,7 @@ void ParameterAttachment::addBindings() {
             }
 
             processor.juceAdapter()->setValueAsUserAction(h, v);
-            // Return the new normalized value, not the stale one from getValue01UI
+            // Return the new normalized value, not the stale one from getValue01
             auto newVal01 = config.range.normalize(v);
             return choc::value::Value(newVal01);
         });
@@ -76,7 +76,7 @@ void ParameterAttachment::addBindings() {
 
             auto clampedVal01 = std::clamp((float)newValue01, 0.f, 1.f);
             processor.params().setValue01(h, clampedVal01);
-            // Return the new normalized value, not the stale one from getValue01UI
+            // Return the new normalized value, not the stale one from getValue01
             return choc::value::Value(clampedVal01);
         });
 
@@ -91,7 +91,7 @@ void ParameterAttachment::addBindings() {
             const auto& config = processor.params().config(h);
 
             processor.juceAdapter()->setValueAsUserAction(h, static_cast<float>(newUserValue));
-            // Return the new normalized value, not the stale one from getValue01UI
+            // Return the new normalized value, not the stale one from getValue01
             auto newVal01 = config.range.normalize(static_cast<float>(newUserValue));
             return choc::value::Value(newVal01);
         });
@@ -139,7 +139,7 @@ void ParameterAttachment::addBindings() {
             auto h = processor.params().handle(paramID);
             const auto& config = processor.params().config(h);
 
-            auto v01 = processor.params().getValue01UI(h);
+            auto v01 = processor.params().getValue01(h);
             if (args.size() >= 2) v01 = args[1].getWithDefault(0.f);
             auto uv = config.range.denormalize(v01);
 
@@ -154,7 +154,7 @@ void ParameterAttachment::addBindings() {
             auto h = processor.params().handle(paramID);
             const auto& config = processor.params().config(h);
 
-            auto v01 = processor.params().getValue01UI(h);
+            auto v01 = processor.params().getValue01(h);
             if (args.size() > 1) {
                 v01 = args[1].getWithDefault(0.f);
             }
@@ -218,7 +218,7 @@ void ParameterAttachment::addBindings() {
 void ParameterAttachment::sendStateToBrowser(Handle h) {
     const auto& config = processor.params().config(h);
     auto uid = choc::value::Value(config.uid);
-    auto value = choc::value::Value(processor.params().getValue01UI(h));
+    auto value = choc::value::Value(processor.params().getValue01(h));
     connection.eval("window.ui.updateParameterState", {uid, value});
 }
 
@@ -236,7 +236,7 @@ choc::value::Value ParameterAttachment::getParameterSpecValue(Handle h) {
     auto paramSpec = choc::value::createObject("param");
     paramSpec.setMember("uid", config.uid);
     paramSpec.setMember("name", config.name);
-    paramSpec.setMember("value01", processor.params().getValue01UI(h));
+    paramSpec.setMember("value01", processor.params().getValue01(h));
     paramSpec.setMember("defaultVal01", config.range.normalize(config.defaultValue));
     paramSpec.setMember("locked", processor.params().isLocked(h));
 
