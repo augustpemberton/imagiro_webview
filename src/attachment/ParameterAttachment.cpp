@@ -76,6 +76,7 @@ void ParameterAttachment::addBindings() {
 
             auto clampedVal01 = std::clamp((float)newValue01, 0.f, 1.f);
             processor.params().setValue01(h, clampedVal01);
+            processor.juceAdapter()->pushToHost(h);
             // Return the new normalized value, not the stale one from getValue01
             return choc::value::Value(clampedVal01);
         });
