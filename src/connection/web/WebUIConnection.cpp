@@ -24,8 +24,19 @@ namespace imagiro {
 
         auto activeView = std::move(preparedWebview);
         bindEditorSpecificFunctions(*activeView, editor);
-        preparedWebview = createWebView();
-        setupWebview(*preparedWebview);
+
+        try {
+            preparedWebview = createWebView();
+            setupWebview(*preparedWebview);
+        } catch (const std::exception& e) {
+            resources->getErrorLogger().logMessage("prepared webview creation failed");
+            resources->getErrorLogger().logMessage(e.what());
+            preparedWebview.reset();
+        } catch (...) {
+            resources->getErrorLogger().logMessage("prepared webview creation failed");
+            preparedWebview.reset();
+        }
+
         return activeView;
     }
 
@@ -35,8 +46,6 @@ namespace imagiro {
 #else
         auto debugMode = false;
 #endif
-
-        debugMode = true;
 
         try {
             auto view = std::make_shared<choc::ui::WebView>(
@@ -64,7 +73,7 @@ namespace imagiro {
         } catch (const std::exception& e) {
             resources->getErrorLogger().logMessage("webview creation failed");
             resources->getErrorLogger().logMessage(e.what());
-            throw e;
+            throw;
         }
     }
 

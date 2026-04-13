@@ -62,8 +62,19 @@ namespace imagiro {
     }
 
     juce::AudioProcessorEditor *WebProcessor::createEditor() {
-        auto e = new WebUIPluginEditor(*this);
-        wrapEditor(e);
-        return e;
+        try {
+            auto e = std::make_unique<WebUIPluginEditor>(*this);
+            wrapEditor(e.get());
+            return e.release();
+        } catch (const std::exception& e) {
+            juce::SharedResourcePointer<Resources> resources;
+            resources->getErrorLogger().logMessage("web editor creation failed");
+            resources->getErrorLogger().logMessage(e.what());
+        } catch (...) {
+            juce::SharedResourcePointer<Resources> resources;
+            resources->getErrorLogger().logMessage("web editor creation failed");
+        }
+
+        return new juce::GenericAudioProcessorEditor(*this);
     }
 }

@@ -36,9 +36,11 @@ namespace imagiro {
                                return {};
                            }));
 #if JUCE_MAC
-            setView(webView->getViewHandle());
+            if (auto* handle = webView->getViewHandle())
+                setView(handle);
 #elif JUCE_WINDOWS
-            setHWND(webView->getViewHandle());
+            if (auto* handle = webView->getViewHandle())
+                setHWND(handle);
             wKW = std::make_unique<WinKeypressWorkaround>(*webView, *this);
 #endif
 

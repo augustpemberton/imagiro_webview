@@ -15,13 +15,17 @@ public:
     }
 
     void onKeyDown(std::string key) override {
+        if (key.empty()) return;
         auto scanCode = getScanCode(key[0]);
+        if (scanCode == 0) return;
         auto event = createKeypress(scanCode, true);
         sendKeypress(event);
     }
 
     void onKeyUp(std::string key) override {
+        if (key.empty()) return;
         auto scanCode = getScanCode(key[0]);
+        if (scanCode == 0) return;
         auto event = createKeypress(scanCode, false);
         sendKeypress(event);
     }
@@ -52,7 +56,15 @@ public:
 
     void sendKeypress(INPUT event) {
         resetWindow = GetFocus();
-        auto nativeWindow = (HWND) component.getTopLevelComponent()->getPeer()->getNativeHandle();
+        auto* topLevel = component.getTopLevelComponent();
+        if (topLevel == nullptr) return;
+
+        auto* peer = topLevel->getPeer();
+        if (peer == nullptr) return;
+
+        auto nativeWindow = (HWND) peer->getNativeHandle();
+        if (nativeWindow == nullptr) return;
+
         SetFocus(nativeWindow);
 
         SendInput(1, &event, sizeof(INPUT));
@@ -61,7 +73,10 @@ public:
     }
 
     void timerCallback() override {
-        SetFocus(resetWindow);
+        if (auto* window = resetWindow.load())
+            SetFocus(window);
+
+        resetWindow = nullptr;
         stopTimer();
     }
 
@@ -73,4 +88,3 @@ private:
 
     moodycamel::ReaderWriterQueue<INPUT> eventsToSend;
 };
-

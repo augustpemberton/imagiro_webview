@@ -87,8 +87,12 @@ public:
     float getWindowsTextScaleFactor()
     {
 #if JUCE_WINDOWS
-        winrt::Windows::UI::ViewManagement::UISettings settings;
-        return settings.TextScaleFactor();
+        try {
+            winrt::Windows::UI::ViewManagement::UISettings settings;
+            const auto scale = settings.TextScaleFactor();
+            if (scale > 0.0f && scale < 4.0f) return scale;
+        } catch (...) {
+        }
 #endif
         return 1.0f; // Default to 1.0 if we couldn't get the scale factor
     }
