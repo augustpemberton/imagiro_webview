@@ -43,10 +43,10 @@ namespace imagiro {
             });
         }
 
-        void OnTaskFinished(int taskID, const choc::value::ValueView &result) override {
+        void OnTaskFinished(int taskID, const nlohmann::json& result) override {
             connection.eval("window.ui.onBackgroundTaskFinished", {
                 choc::value::Value{taskID},
-                choc::value::Value{result}
+                choc::json::parse(result.dump())
             });
         }
 
@@ -207,11 +207,12 @@ namespace imagiro {
                 if (!connection.getBoundFunctions().contains(fnName)) return {};
                 const auto underlyingFn = connection.getBoundFunctions().at(fnName);
 
-                const auto jobID = backgroundTaskRunner.queueTask({
-                    [underlyingFn, fnArgs] {
-                        return underlyingFn(fnArgs);
-                    }
-                });
+                BackgroundTaskRunner::Task task;
+                task.fn = [underlyingFn, fnArgs] {
+                    return nlohmann::json::parse(choc::json::toString(underlyingFn(fnArgs)));
+                };
+
+                const auto jobID = backgroundTaskRunner.queueTask(std::move(task));
 
                 return choc::value::Value{jobID};
             });
